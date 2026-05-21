@@ -1,0 +1,88 @@
+﻿{
+  "tasks": [
+    {
+      "phase": "frontend",
+      "name": "初始化前端项目",
+      "description": "使用 Vite 创建 React + TypeScript 项目，初始化 Git 仓库，配置 ESLint + Prettier，安装依赖（react, react-dom, react-router-dom, redux 或 zustand, axios, tailwindcss 或 MUI）。",
+      "output": "React + TypeScript 项目骨架"
+    },
+    {
+      "phase": "frontend",
+      "name": "前端目录结构初始化",
+      "description": "创建前端目录结构，包括 public、components、pages、canvas、api、store、utils 目录。",
+      "output": "标准化目录结构"
+    },
+    {
+      "phase": "frontend",
+      "name": "创建基础组件和页面",
+      "description": "创建 MainPage、StarMap、PlayerPanel、TradeForm、EventModal、TransactionLog 等组件，并创建页面路由。",
+      "output": "前端基础组件和页面模板"
+    },
+    {
+      "phase": "frontend",
+      "name": "状态管理配置",
+      "description": "使用 Redux 或 Zustand 创建全局状态管理模块，包括玩家状态、星图数据、商品价格、事件状态，支持状态持久化。",
+      "output": "前端全局状态管理"
+    },
+    {
+      "phase": "frontend",
+      "name": "API 封装模块",
+      "description": "封装 HTTP API（GET /players/:id/status, POST /trade, POST /move, POST /event/choice）和 WebSocket 推送接口。",
+      "output": "前端 API 调用模块"
+    },
+    {
+      "phase": "backend",
+      "name": "初始化后端项目",
+      "description": "使用 FastAPI 初始化 Python 后端项目，配置 Git、PEP8、类型注解，安装依赖（fastapi, uvicorn, asyncpg 或 psycopg2, sqlalchemy, APScheduler, websockets）。",
+      "output": "FastAPI 项目骨架"
+    },
+    {
+      "phase": "backend",
+      "name": "后端目录结构初始化",
+      "description": "创建后端目录结构，包括 api、services、db、models、schemas、utils、main.py 和 alembic 数据库迁移目录。",
+      "output": "标准化后端目录结构"
+    },
+    {
+      "phase": "backend",
+      "name": "数据库连接与事务管理",
+      "description": "配置数据库连接模块，封装事务管理函数，支持交易、涟漪、通缉、垄断操作的原子事务。",
+      "output": "数据库连接与事务管理模块"
+    },
+    {
+      "phase": "backend",
+      "name": "核心服务封装",
+      "description": "封装交易服务、通缉服务、垄断判定服务、事件服务，实现调用数据库存储过程和视图逻辑。",
+      "output": "服务层模块"
+    },
+    {
+      "phase": "backend",
+      "name": "API 路由配置",
+      "description": "配置 HTTP API 路由和 WebSocket 路由，实现玩家状态获取、交易提交、移动、事件选择和实时推送。",
+      "output": "后端 API 与 WebSocket 路由模块"
+    },
+    {
+      "phase": "iteration",
+      "name": "迭代1：基础玩法实现",
+      "description": "实现单局交易、买卖流程、交易日志写入、动态价格视图、涟漪传播基础实现（1~2跳）、前端资产与星图展示。",
+      "output": "可运行的基础游戏版本"
+    },
+    {
+      "phase": "iteration",
+      "name": "迭代2：游戏机制拓展",
+      "description": "实现完整通缉系统、多等级仓库系统、垄断胜利判定逻辑、随机事件系统（生成 + 事件选择）。",
+      "output": "核心玩法完整版本"
+    },
+    {
+      "phase": "iteration",
+      "name": "迭代3：实时优化",
+      "description": "实现 WebSocket 推送价格、事件、通缉状态，优化 Canvas 动画与前端性能，支持大量数据渲染。",
+      "output": "高实时性游戏版本"
+    },
+    {
+      "phase": "iteration",
+      "name": "迭代4：教学演示优化",
+      "description": "增加经济数据可视化、触发器和事务回滚演示，扩展事件类型和商品类型。",
+      "output": "教学展示优化版本"
+    }
+  ]
+}
