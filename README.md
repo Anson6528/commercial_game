@@ -66,14 +66,15 @@ cd commercial_game
 ,在终端中输入 docker --version 来验证 Docker 是否安装成功。
 然后在终端中执行以下命令来创建一个 OpenGauss 容器：
 
+
 ```bash
 docker run --name opengauss \
   --privileged=true \
-  -e GS_PASSWORD=database@123 \
+  -e GS_PASSWORD=Database@123 \
   -p 5432:5432 \
   -d enmotech/opengauss-lite:latest
 ```
-注意：上述命令中设置了密码为 `database@123`，端口号是 5432。这些参数是可以自行修改的，但为了保持一致性，建议大家使用相同的值，否则会影响项目中的数据库连接。
+注意：上述命令中设置了密码为 `Database@123`，端口号是 5432。这些参数是可以自行修改的，但为了保持一致性，建议大家使用相同的值，否则会影响项目中的数据库连接。还有就是上一步需要翻墙。
 
 然后等待容器启动完成，可以通过以下命令查看容器状态：
 
@@ -90,6 +91,9 @@ gsql -d postgres
 CREATE DATABASE opengauss_commercial_game;
 CREATE USER shu WITH PASSWORD 'database@123';
 GRANT ALL PRIVILEGES ON DATABASE opengauss_commercial_game TO shu;
+\c opengauss_commercial_game
+GRANT USAGE, CREATE ON SCHEMA public TO shu;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO shu;
 ```
 
 
