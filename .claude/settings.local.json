@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(rm -f \"components/PlayerPanel.tsx\" \"components/TradeForm.tsx\" \"components/EventModal.tsx\" \"pages/MainPage.tsx\" \"App.css\")",
+      "Bash(rmdir \"components\")"
+    ]
+  }
+}

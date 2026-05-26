@@ -1,9 +1,30 @@
 import { useRef, useEffect, useCallback } from 'react';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { selectPlanet } from '../store';
+import { ASSET_PATHS } from '../theme/assets';
 
-const PLANET_RADIUS = 8;
+const STATION_SIZE = 32;
 const LINE_WIDTH = 1;
+
+/* ---- preload station images ---- */
+const stationImages: Map<number, HTMLImageElement> = new Map();
+const stationSources: Record<number, string> = {
+  0: ASSET_PATHS.stations.normal,
+  1: ASSET_PATHS.stations.hub,
+  2: ASSET_PATHS.stations.danger,
+};
+
+function getStationImg(planetId: number): HTMLImageElement | null {
+  if (!stationImages.has(planetId)) {
+    const img = new Image();
+    // distribute: small id → normal, medium → hub, large → danger
+    const type = planetId % 7 <= 2 ? 0 : planetId % 7 <= 4 ? 1 : 2;
+    img.src = stationSources[type];
+    stationImages.set(planetId, img);
+  }
+  const img = stationImages.get(planetId)!;
+  return img.complete ? img : null;
+}
 
 export default function StarMap() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -19,7 +40,7 @@ export default function StarMap() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Draw connections
-    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
     ctx.lineWidth = LINE_WIDTH;
     connections.forEach((conn) => {
       const from = planets.find((p) => p.id === conn.from);
@@ -31,19 +52,35 @@ export default function StarMap() {
       ctx.stroke();
     });
 
-    // Draw planets
+    // Draw planets with station PNG
     planets.forEach((p) => {
       const isSelected = p.id === selectedPlanetId;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, isSelected ? PLANET_RADIUS + 4 : PLANET_RADIUS, 0, Math.PI * 2);
-      ctx.fillStyle = isSelected ? '#66bb6a' : '#42a5f5';
-      ctx.fill();
+      const img = getStationImg(p.id);
+
+      if (img) {
+        const half = STATION_SIZE / 2;
+        // glow ring for selected
+        if (isSelected) {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, half + 6, 0, Math.PI * 2);
+          ctx.strokeStyle = '#00d4ff66';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+        ctx.drawImage(img, p.x - half, p.y - half, STATION_SIZE, STATION_SIZE);
+      } else {
+        // fallback: simple circle while image loads
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, isSelected ? 12 : 8, 0, Math.PI * 2);
+        ctx.fillStyle = isSelected ? '#66bb6a' : '#42a5f5';
+        ctx.fill();
+      }
 
       // Label
       ctx.fillStyle = '#e0e0e0';
-      ctx.font = '12px sans-serif';
+      ctx.font = '11px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(p.name, p.x, p.y + PLANET_RADIUS + 16);
+      ctx.fillText(p.name, p.x, p.y + STATION_SIZE / 2 + 14);
     });
   }, [planets, connections, selectedPlanetId]);
 
@@ -57,7 +94,20 @@ export default function StarMap() {
     const ctx = canvas.getContext('2d');
     if (ctx) ctx.scale(dpr, dpr);
     draw();
-  }, [draw]);
+
+    // redraw when images finish loading
+    const checkImages = setInterval(() => {
+      const allLoaded = planets.every((p) => {
+        const img = stationImages.get(p.id);
+        return img && img.complete;
+      });
+      if (allLoaded) {
+        draw();
+        clearInterval(checkImages);
+      }
+    }, 200);
+    return () => clearInterval(checkImages);
+  }, [draw, planets]);
 
   function handleClick(e: React.MouseEvent<HTMLCanvasElement>) {
     const canvas = canvasRef.current;
@@ -69,7 +119,7 @@ export default function StarMap() {
     for (const p of planets) {
       const dx = x - p.x;
       const dy = y - p.y;
-      if (Math.sqrt(dx * dx + dy * dy) <= PLANET_RADIUS + 6) {
+      if (Math.sqrt(dx * dx + dy * dy) <= STATION_SIZE / 2 + 6) {
         dispatch(selectPlanet(p.id));
         return;
       }
@@ -83,7 +133,7 @@ export default function StarMap() {
       style={{
         width: '100%',
         height: '100%',
-        background: '#0d1117',
+        background: 'transparent',
         borderRadius: 8,
         cursor: 'pointer',
       }}
