@@ -1,15 +1,10 @@
-import { Box, Typography, Button, Stack, keyframes } from '@mui/material';
+import { Box, Typography, Button } from '@mui/material';
 import {
   PlayArrow as PlayIcon,
   Leaderboard as RankIcon,
   ExitToApp as ExitIcon,
 } from '@mui/icons-material';
 import colors from '../theme/colors';
-
-const glow = keyframes`
-  0%, 100% { box-shadow: 0 0 20px ${colors.glow}; }
-  50%      { box-shadow: 0 0 60px ${colors.glowStrong}; }
-`;
 
 interface Props {
   playerName: string;
@@ -47,58 +42,92 @@ export default function LobbyScreen({
           height: 400,
           borderRadius: '50%',
           background: `radial-gradient(circle, ${colors.glowStrong} 0%, transparent 70%)`,
-          animation: `${glow} 4s ease-in-out infinite`,
+          animation: 'glowPulse 4s ease-in-out infinite',
           pointerEvents: 'none',
         }}
       />
 
       <Typography
-        variant="h3"
-        sx={{ color: colors.white, animation: 'fadeIn 0.6s ease', position: 'relative', zIndex: 1 }}
+        sx={{
+          fontFamily: 'var(--font-heading)',
+          fontSize: '2.2rem',
+          color: colors.white,
+          animation: 'fadeIn 0.6s ease',
+          position: 'relative',
+          zIndex: 1,
+          textShadow: `0 0 24px ${colors.glowStrong}, 0 0 48px ${colors.glow}`,
+          letterSpacing: '0.04em',
+        }}
       >
         星际货运垄断者
       </Typography>
 
       <Typography
-        variant="body1"
-        sx={{ color: colors.text, fontFamily: 'var(--font-mono)', animation: 'fadeIn 0.6s ease 0.2s both' }}
+        sx={{
+          color: colors.textSub,
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.85rem',
+          animation: 'fadeIn 0.6s ease 0.2s both',
+        }}
       >
         {playerName}，欢迎回来
       </Typography>
 
-      <Stack spacing={2} sx={{ width: 300, position: 'relative', zIndex: 1, animation: 'fadeIn 0.6s ease 0.4s both' }}>
+      <Box sx={{ width: 300, position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 1.5, animation: 'fadeIn 0.6s ease 0.4s both' }}>
         <Button
           variant="contained"
-          color="primary"
-          size="large"
           startIcon={<PlayIcon />}
           onClick={onStartGame}
-          sx={{ py: 1.75, fontSize: '0.95rem' }}
+          className="tech-button"
+          sx={{
+            py: 1.75,
+            fontSize: '0.95rem',
+            fontFamily: 'var(--font-heading)',
+            letterSpacing: '0.05em',
+            clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
+            background: 'linear-gradient(180deg, rgba(0,212,255,0.18) 0%, rgba(0,212,255,0.06) 100%)',
+            border: `1px solid ${colors.borderHover}`,
+            color: colors.white,
+            '&:hover': { boxShadow: `0 0 20px ${colors.glowStrong}` },
+          }}
         >
           开始游戏
         </Button>
 
         <Button
           variant="outlined"
-          size="large"
           startIcon={<RankIcon />}
           onClick={onShowLeaderboard}
-          sx={{ py: 1.75, fontSize: '0.85rem' }}
+          className="tech-button"
+          sx={{
+            py: 1.75,
+            fontSize: '0.85rem',
+            fontFamily: 'var(--font-heading)',
+            letterSpacing: '0.05em',
+            clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
+            borderColor: colors.border,
+            color: colors.textSub,
+            '&:hover': { borderColor: colors.primary, color: colors.primary, bgcolor: 'rgba(0,212,255,0.04)' },
+          }}
         >
           排行榜
         </Button>
 
         <Button
           variant="text"
-          color="inherit"
-          size="large"
           startIcon={<ExitIcon />}
           onClick={onLogout}
-          sx={{ py: 1.5, fontSize: '0.8rem', color: colors.muted }}
+          sx={{
+            py: 1.5,
+            fontSize: '0.8rem',
+            fontFamily: 'var(--font-heading)',
+            color: colors.muted,
+            '&:hover': { color: colors.dangerHigh },
+          }}
         >
           退出
         </Button>
-      </Stack>
+      </Box>
     </Box>
   );
 }

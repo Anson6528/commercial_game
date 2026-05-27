@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Box, keyframes } from '@mui/material';
+import colors from '../theme/colors';
 
 /* ---- flash types ---- */
-export type FlashType = 'encounter' | 'market' | 'route' | 'warp';
+export type FlashType = 'encounter' | 'market' | 'route' | 'warp' | 'tradeSuccess';
 
 interface Config {
   color: string;
@@ -14,10 +15,11 @@ interface Config {
 }
 
 const CONFIG: Record<FlashType, Config> = {
-  encounter: { color: '#ef4444', edge: true,  border: false, pulse: false, count: 3, duration: 300 },
-  market:    { color: '#ffd700', edge: false, border: true,  pulse: false, count: 1, duration: 1500 },
-  route:     { color: '#3b82f6', edge: false, border: false, pulse: true,  count: 2, duration: 600 },
-  warp:      { color: '#00d4aa', edge: false, border: false, pulse: true,  count: 1, duration: 800 },
+  encounter:    { color: colors.dangerHigh, edge: true,  border: false, pulse: false, count: 3, duration: 300 },
+  market:       { color: colors.warning,    edge: false, border: true,  pulse: false, count: 1, duration: 1500 },
+  route:        { color: colors.primary,    edge: false, border: false, pulse: true,  count: 2, duration: 600 },
+  warp:         { color: colors.successLow, edge: false, border: false, pulse: true,  count: 1, duration: 800 },
+  tradeSuccess: { color: colors.primary,    edge: true,  border: false, pulse: false, count: 2, duration: 400 },
 };
 
 /* ---- keyframes ---- */
@@ -82,7 +84,7 @@ export default function ScreenFlash({ type, onComplete }: Props) {
           sx={{
             position: 'absolute',
             inset: 4,
-            borderRadius: 2,
+            borderRadius: '2px',
             border: '3px solid transparent',
             borderImage: `linear-gradient(90deg, transparent, ${cfg.color}, transparent) 1`,
             background: `linear-gradient(90deg, transparent 0%, ${cfg.color}33 50%, transparent 100%)`,

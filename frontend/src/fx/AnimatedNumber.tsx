@@ -7,6 +7,8 @@ interface Props {
   formatted?: boolean;
   className?: string;
   style?: React.CSSProperties;
+  prefix?: string;
+  suffix?: string;
 }
 
 /**
@@ -19,9 +21,16 @@ export default function AnimatedNumber({
   formatted = true,
   className,
   style,
+  prefix = '',
+  suffix = '',
 }: Props) {
   const [display, setDisplay] = useState(String(value));
   const prevValue = useRef(value);
+  const displayRef = useRef(display);
+
+  useEffect(() => {
+    displayRef.current = display;
+  });
 
   useEffect(() => {
     if (value === prevValue.current) return;
@@ -29,7 +38,7 @@ export default function AnimatedNumber({
 
     const target = formatted ? value.toLocaleString() : String(value);
     const targetDigits = target.replace(/[^0-9]/g, '').split('').map(Number);
-    const startDigits = display.replace(/[^0-9]/g, '').split('').map(Number);
+    const startDigits = displayRef.current.replace(/[^0-9]/g, '').split('').map(Number);
 
     // Pad shorter side
     while (startDigits.length < targetDigits.length) startDigits.unshift(0);
@@ -63,7 +72,7 @@ export default function AnimatedNumber({
       className={className}
       style={{ fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums', ...style }}
     >
-      {display}
+      {prefix}{display}{suffix}
     </span>
   );
 }

@@ -13,17 +13,11 @@ import { WorldEventToastContainer } from '../fx/WorldEventToast';
 
 /* ---- layer components ---- */
 interface GameSceneLayout {
-  /** PixiJS canvas mount point — FE-Core provides a ref here */
   canvasRef: React.RefObject<HTMLDivElement | null>;
-  /** FE-Core passes ready-made TopHUD props */
   topHUD: TopHUDProps;
-  /** FE-Core passes right cargo data */
   rightCargo: RightCargoPanelProps;
-  /** FE-Core passes bottom info data */
   bottomInfo: BottomInfoBarProps;
-  /** active modal rendered by FE-Core (e.g. TradeModal, EncounterModal) */
   modalSlot?: ReactNode;
-  /** whether the game is processing an action (locks UI) */
   isProcessing?: boolean;
 }
 
@@ -42,25 +36,22 @@ export default function GameScene({
   }, []);
 
   return (
-    <Box sx={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
-      {/* ---- Layer 0: Star Map ---- */}
+    <Box sx={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden', background: '#0a0e1a' }}>
+      {/* ---- Layer 0: Star Map (fullscreen) ---- */}
       <Box
         ref={canvasRef}
         sx={{
-          position: 'absolute',
-          top: 'var(--hud-top-height)',
-          right: 'var(--hud-right-width)',
-          bottom: 'var(--hud-bottom-height)',
-          left: 0,
+          position: 'fixed',
+          inset: 0,
           zIndex: 0,
-          transition: 'filter 0.3s ease',
-          ...(isProcessing ? { filter: 'brightness(0.7)' } : {}),
+          transition: 'filter 0.4s ease',
+          ...(isProcessing ? { filter: 'brightness(0.6) blur(2px)' } : {}),
         }}
       >
         <StarMap />
       </Box>
 
-      {/* ---- Layer 1: DOM HUD ---- */}
+      {/* ---- Layer 1: DOM HUD Overlays ---- */}
       <TopHUD {...topHUD} disabled={isProcessing} />
       <RightCargoPanel {...rightCargo} />
       <BottomInfoBar
@@ -69,13 +60,13 @@ export default function GameScene({
         regionViewActive={regionView}
       />
 
-      {/* ---- Layer 2: Modals (rendered by FE-Core) ---- */}
+      {/* ---- Layer 2: Modals ---- */}
       {modalSlot}
 
       {/* ---- Layer 3: Toasts & Loading ---- */}
       <WorldEventToastContainer />
 
-      {/* isProcessing overlay (blocks clicks but not visuals) */}
+      {/* isProcessing overlay */}
       {isProcessing && (
         <Box
           sx={{
@@ -83,6 +74,7 @@ export default function GameScene({
             inset: 0,
             zIndex: 15,
             pointerEvents: 'auto',
+            bgcolor: 'rgba(0,0,0,0.15)',
           }}
         />
       )}

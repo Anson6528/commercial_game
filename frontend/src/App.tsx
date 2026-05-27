@@ -56,12 +56,30 @@ const MOCK_MONOPOLY: BottomInfoBarProps['monopolyItems'] = [
 
 /* ---- trade modal mock ---- */
 const MOCK_STATION_GOODS: GoodsCard[] = [
-  { goodsId: 1, goodsName: '标准矿石', currentPrice: 280, stock: 45, isContraband: false, isLocked: false },
-  { goodsId: 2, goodsName: '高能晶体', currentPrice: 340, previousPrice: 380, stock: 12, isContraband: false, isLocked: false },
-  { goodsId: 3, goodsName: '精密零件', currentPrice: 1200, stock: 8, isContraband: false, isLocked: true, lockReason: '通缉等级限制' },
-  { goodsId: 4, goodsName: '星际芯片', currentPrice: 580, previousPrice: 520, stock: 22, isContraband: false, isLocked: false },
-  { goodsId: 5, goodsName: '医疗药剂', currentPrice: 180, stock: 60, isContraband: false, isLocked: false },
-  { goodsId: 8, goodsName: '走私艺术品', currentPrice: 1200, stock: 5, isContraband: true, isLocked: false },
+  {
+    goodsId: 1, goodsName: '标准矿石', currentPrice: 280, stock: 45, isContraband: false, isLocked: false,
+    maxStock: 90
+  },
+  {
+    goodsId: 2, goodsName: '高能晶体', currentPrice: 340, previousPrice: 380, stock: 12, isContraband: false, isLocked: false,
+    maxStock: 24
+  },
+  {
+    goodsId: 3, goodsName: '精密零件', currentPrice: 1200, stock: 8, isContraband: false, isLocked: true, lockReason: '通缉等级限制',
+    maxStock: 16
+  },
+  {
+    goodsId: 4, goodsName: '星际芯片', currentPrice: 580, previousPrice: 520, stock: 22, isContraband: false, isLocked: false,
+    maxStock: 44
+  },
+  {
+    goodsId: 5, goodsName: '医疗药剂', currentPrice: 180, stock: 60, isContraband: false, isLocked: false,
+    maxStock: 120
+  },
+  {
+    goodsId: 8, goodsName: '走私艺术品', currentPrice: 1200, stock: 5, isContraband: true, isLocked: false,
+    maxStock: 10
+  },
 ];
 
 const MOCK_CARGO: CargoSlotItem[] = [
@@ -293,7 +311,7 @@ export default function App() {
                   gap: 1,
                   px: 1.5,
                   py: 0.75,
-                  borderRadius: 1,
+                  borderRadius: '2px',
                   bgcolor: 'rgba(10,15,30,0.92)',
                   border: `1px solid ${colors.border}`,
                   backdropFilter: 'blur(4px)',

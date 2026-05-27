@@ -21,27 +21,40 @@ export interface BottomInfoBarProps {
   regionViewActive?: boolean;
 }
 
-function MiniProgressBar({ item }: { item: MonopolyItem }) {
+function ResourceMiniCard({ item }: { item: MonopolyItem }) {
   const pct = item.ratio * 100;
   const barColor =
-    pct >= 80 ? colors.accent :
-    pct >= 50 ? colors.warning :
-    colors.primary;
-  const reachedMonopoly = pct >= 80;
+    pct >= 70 ? colors.primary :
+    pct >= 30 ? colors.warning :
+    colors.dangerHigh;
 
   return (
-    <Tooltip
-      title={`${item.goodsName}: ${pct.toFixed(1)}%`}
-      arrow
-      placement="top"
-    >
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25, minWidth: 52 }}>
-        <Box component="img" src={goodsSrc(item.goodsId)} alt={item.goodsName} sx={{ width: 20, height: 20, opacity: 0.85 }} />
+    <Tooltip title={`${item.goodsName}: ${pct.toFixed(1)}%`} arrow placement="top">
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 0.5,
+          minWidth: 72,
+          px: 1,
+          py: 0.75,
+          borderRadius: '2px',
+          border: `1px solid ${colors.border}`,
+          bgcolor: 'rgba(0,212,255,0.02)',
+          transition: 'all var(--transition-fast)',
+          '&:hover': {
+            borderColor: colors.primary,
+            bgcolor: 'rgba(0,212,255,0.05)',
+          },
+        }}
+      >
+        <Box component="img" src={goodsSrc(item.goodsId)} alt={item.goodsName} sx={{ width: 22, height: 22, opacity: 0.9 }} />
         <Typography
           sx={{
             fontFamily: 'var(--font-mono)',
             fontSize: '0.55rem',
-            color: colors.muted,
+            color: colors.textSub,
             lineHeight: 1,
           }}
         >
@@ -52,20 +65,19 @@ function MiniProgressBar({ item }: { item: MonopolyItem }) {
           value={Math.min(pct, 100)}
           sx={{
             width: '100%',
-            height: 3,
-            borderRadius: 2,
+            height: 4,
+            borderRadius: '2px',
             backgroundColor: 'rgba(255,255,255,0.04)',
             '& .MuiLinearProgress-bar': {
               bgcolor: barColor,
-              animation: reachedMonopoly ? 'pulse 1s ease-in-out infinite' : 'none',
             },
           }}
         />
         <Typography
           sx={{
             fontFamily: 'var(--font-mono)',
-            fontSize: '0.5rem',
-            fontWeight: reachedMonopoly ? 700 : 400,
+            fontSize: '0.55rem',
+            fontWeight: 600,
             color: barColor,
           }}
         >
@@ -96,15 +108,17 @@ export default function BottomInfoBar({
         height: 'var(--hud-bottom-height)',
         display: 'flex',
         alignItems: 'center',
-        px: 2.5,
+        px: 3,
         gap: 3,
         zIndex: 10,
+        background: 'rgba(10, 14, 26, 0.7)',
+        backdropFilter: 'blur(12px)',
       }}
     >
-      {/* ---- monopoly mini bars ---- */}
-      <Box sx={{ display: 'flex', gap: 1.5, flex: 2, alignItems: 'flex-end', overflow: 'auto' }}>
+      {/* ---- resource mini cards ---- */}
+      <Box sx={{ display: 'flex', gap: 1, flex: 2, alignItems: 'center', overflow: 'auto' }}>
         {monopolyItems.length > 0 ? (
-          monopolyItems.map((item) => <MiniProgressBar key={item.goodsId} item={item} />)
+          monopolyItems.map((item) => <ResourceMiniCard key={item.goodsId} item={item} />)
         ) : (
           <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: colors.muted }}>
             No monopoly data
@@ -115,10 +129,10 @@ export default function BottomInfoBar({
       {/* ---- station info ---- */}
       <Box sx={{ flex: 1.5, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
         {currentStationName ? (
-          <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: colors.white }}>
-            {'📍'} {currentStationName}
+          <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: colors.textMain, fontWeight: 500 }}>
+            {'\u{1F4CD}'} {currentStationName}
             {currentStationSecurity && (
-              <Typography component="span" sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.6rem', color: colors.muted, ml: 0.75 }}>
+              <Typography component="span" sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: colors.textSub, ml: 0.75 }}>
                 安全: {currentStationSecurity}
               </Typography>
             )}
@@ -134,14 +148,14 @@ export default function BottomInfoBar({
           <Typography
             sx={{
               fontFamily: 'var(--font-mono)',
-              fontSize: '0.65rem',
+              fontSize: '0.7rem',
               color: colors.primary,
               animation: 'fadeIn 0.2s ease',
             }}
           >
-            {'🎯'} 悬停: {hoveredStationName}
+            {'\u{1F3AF}'} 悬停: {hoveredStationName}
             {hoveredMoveCost !== undefined && (
-              <Typography component="span" sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.6rem', color: colors.warning, ml: 0.75 }}>
+              <Typography component="span" sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: colors.warning, ml: 0.75 }}>
                 消耗: {hoveredMoveCost} 单位
               </Typography>
             )}
@@ -156,13 +170,13 @@ export default function BottomInfoBar({
         sx={{
           ml: 1,
           border: `1px solid ${regionViewActive ? colors.primary : colors.border}`,
-          borderRadius: 1,
-          opacity: regionViewActive ? 1 : 0.5,
+          borderRadius: '2px',
+          opacity: regionViewActive ? 1 : 0.6,
           transition: 'all var(--transition-fast)',
-          '&:hover': { borderColor: colors.primary, opacity: 1 },
+          '&:hover': { borderColor: colors.primary, opacity: 1, bgcolor: 'rgba(0,212,255,0.06)' },
         }}
       >
-        <Box component="img" src={ASSET_PATHS.icons.uiSector} alt="" sx={{ width: 18, height: 18 }} />
+        <Box component="img" src={ASSET_PATHS.icons.uiSector} alt="" sx={{ width: 20, height: 20 }} />
       </IconButton>
     </Box>
   );

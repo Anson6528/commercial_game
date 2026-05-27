@@ -23,7 +23,7 @@ export default function LoadingSpinner({ text = '正在连接贸易网络...', s
             position: 'absolute',
             inset: 0,
             border: `2px solid ${colors.primary}`,
-            borderRadius: 1,
+            borderRadius: '2px',
             animation: `${spinClock} 2s linear infinite`,
           }}
         />
@@ -41,7 +41,7 @@ export default function LoadingSpinner({ text = '正在连接贸易网络...', s
         sx={{
           fontFamily: 'var(--font-mono)',
           fontSize: '0.75rem',
-          color: colors.text,
+          color: colors.textSub,
           animation: 'pulse 2s ease-in-out infinite',
         }}
       >

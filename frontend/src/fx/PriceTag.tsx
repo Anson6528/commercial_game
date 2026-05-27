@@ -1,4 +1,5 @@
 import { Box, Typography, Tooltip } from '@mui/material';
+import colors from '../theme/colors';
 import { ArrowUpward, ArrowDownward, Remove } from '@mui/icons-material';
 
 interface Props {
@@ -14,7 +15,7 @@ export default function PriceTag({ goodsName, price, prevPrice, compact = false 
   const trend: 'up' | 'down' | 'flat' =
     changePct === null ? 'flat' : changePct > 0.5 ? 'up' : changePct < -0.5 ? 'down' : 'flat';
 
-  const trendColor = trend === 'up' ? '#22c55e' : trend === 'down' ? '#ef4444' : '#9aa0a6';
+  const trendColor = trend === 'up' ? colors.successLow : trend === 'down' ? colors.dangerHigh : colors.muted;
 
   const content = (
     <Box
@@ -24,7 +25,7 @@ export default function PriceTag({ goodsName, price, prevPrice, compact = false 
         gap: 0.5,
         px: compact ? 1 : 1.25,
         py: compact ? 0.25 : 0.5,
-        borderRadius: 1,
+        borderRadius: '2px',
         bgcolor: 'rgba(10,14,39,0.92)',
         border: `1px solid ${trendColor}33`,
         backdropFilter: 'blur(4px)',
@@ -33,17 +34,17 @@ export default function PriceTag({ goodsName, price, prevPrice, compact = false 
       }}
     >
       {!compact && (
-        <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 80 }}>
+        <Typography variant="caption" noWrap sx={{ maxWidth: 80, color: colors.textSub }}>
           {goodsName}
         </Typography>
       )}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
         {trend === 'up' ? (
-          <ArrowUpward sx={{ fontSize: compact ? 12 : 14, color: trendColor }} />
+          <ArrowUpward sx={{ fontSize: compact ? 14 : 16, color: trendColor }} />
         ) : trend === 'down' ? (
-          <ArrowDownward sx={{ fontSize: compact ? 12 : 14, color: trendColor }} />
+          <ArrowDownward sx={{ fontSize: compact ? 14 : 16, color: trendColor }} />
         ) : (
-          <Remove sx={{ fontSize: compact ? 12 : 14, color: trendColor }} />
+          <Remove sx={{ fontSize: compact ? 14 : 16, color: trendColor }} />
         )}
         <Typography
           variant={compact ? 'caption' : 'body2'}

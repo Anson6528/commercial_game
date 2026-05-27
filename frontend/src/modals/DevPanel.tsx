@@ -43,10 +43,10 @@ export interface DevPanelProps {
 const MOCK_SQL: SqlEntry[] = [
   { timestamp: '10:45:32.123', sql: 'SELECT * FROM v_station_prices WHERE station_id = 5 AND goods_id IN (1,2,3,4,5,6,7,8)', durationMs: 12 },
   { timestamp: '10:45:32.234', sql: 'BEGIN TRANSACTION', durationMs: 0 },
-  { timestamp: '10:45:32.345', sql: "INSERT INTO transaction_logs (player_id, station_id, goods_id, quantity, trade_type, unit_price, total_amount) VALUES (1, 5, 2, 10, 'buy', 340, 3400)", durationMs: 8 },
+  { timestamp: "10:45:32.345", sql: "INSERT INTO transaction_logs (player_id, station_id, goods_id, quantity, trade_type, unit_price, total_amount) VALUES (1, 5, 2, 10, 'buy', 340, 3400)", durationMs: 8 },
   { timestamp: '10:45:32.456', sql: 'UPDATE players SET credits = credits - 3400 WHERE player_id = 1', durationMs: 4 },
   { timestamp: '10:45:32.567', sql: 'UPDATE station_inventory SET stock_quantity = stock_quantity - 10 WHERE station_id = 5 AND goods_id = 2', durationMs: 5 },
-  { timestamp: '10:45:32.678', sql: 'SELECT fn_ripple_price(5, 2, \'buy\', 10)', durationMs: 23 },
+  { timestamp: "10:45:32.678", sql: "SELECT fn_ripple_price(5, 2, 'buy', 10)", durationMs: 23 },
   { timestamp: '10:45:32.789', sql: 'UPDATE wanted_list SET suspicious_score = suspicious_score + 15 WHERE player_id = 1', durationMs: 6 },
   { timestamp: '10:45:32.890', sql: 'COMMIT TRANSACTION', durationMs: 0 },
 ];
@@ -62,6 +62,19 @@ const MOCK_TX: TxStep[] = [
 ];
 
 const MOCK_RIPPLE: string[] = ['阿尔法空间站 (起点)', '贝塔贸易港 (1跳)', '伽马矿业站 (2跳)', '德尔塔枢纽 (3跳)', '埃普西隆哨站 (3跳)'];
+
+/* ---- scanline bar ---- */
+function ScanlineBar({ color = colors.primary }: { color?: string }) {
+  return (
+    <Box
+      sx={{
+        height: 2,
+        background: `repeating-linear-gradient(90deg, transparent, transparent 8px, ${color}22 8px, ${color}22 9px)`,
+        animation: 'scanLine 2s linear infinite',
+      }}
+    />
+  );
+}
 
 /* ---- tab panel ---- */
 function TabPanel({ children, value, index }: { children: React.ReactNode; value: number; index: number }) {
@@ -97,14 +110,16 @@ export default function DevPanel({
           width: 600,
           maxWidth: '92vw',
           zIndex: 25,
-          bgcolor: 'rgba(10,15,30,0.98)',
-          borderRight: `1px solid ${colors.borderHover}`,
+          bgcolor: 'rgba(13,17,28,0.96)',
+          borderRight: `1px solid ${colors.borderGlow}`,
           boxShadow: `8px 0 32px rgba(0,0,0,0.5)`,
           display: 'flex',
           flexDirection: 'column',
           animation: 'slideInLeft 0.3s ease',
         }}
       >
+        <ScanlineBar />
+
         {/* ---- header ---- */}
         <Box
           sx={{
@@ -115,10 +130,10 @@ export default function DevPanel({
             borderBottom: `1px solid ${colors.border}`,
           }}
         >
-          <Typography variant="h6" sx={{ flex: 1, fontFamily: 'var(--font-heading)', fontSize: '0.85rem', letterSpacing: '0.06em', color: colors.primary }}>
+          <Typography sx={{ flex: 1, fontFamily: 'var(--font-heading)', fontSize: '0.85rem', letterSpacing: '0.06em', color: colors.primary }}>
             DEV PANEL
           </Typography>
-          <IconButton onClick={onClose} size="small" sx={{ color: colors.muted }}>
+          <IconButton onClick={onClose} size="small" sx={{ color: colors.textSub }}>
             <CloseIcon fontSize="small" />
           </IconButton>
         </Box>
@@ -137,7 +152,7 @@ export default function DevPanel({
               py: 0.5,
               px: 1.25,
               minWidth: 0,
-              color: colors.muted,
+              color: colors.textSub,
               '&.Mui-selected': { color: colors.primary },
             },
             '& .MuiTabs-indicator': { bgcolor: colors.primary, height: 2 },
@@ -159,7 +174,7 @@ export default function DevPanel({
                 sx={{
                   px: 1.25,
                   py: 1,
-                  borderRadius: 0.5,
+                  borderRadius: '2px',
                   bgcolor: i % 2 === 0 ? 'rgba(0,212,255,0.02)' : 'transparent',
                   border: `1px solid ${colors.border}`,
                 }}
@@ -178,12 +193,12 @@ export default function DevPanel({
                   sx={{
                     fontFamily: 'var(--font-mono)',
                     fontSize: '0.62rem',
-                    color: entry.sql.includes('SELECT') ? '#3b82f6' :
-                           entry.sql.includes('INSERT') ? '#f59e0b' :
+                    color: entry.sql.includes('SELECT') ? colors.primary :
+                           entry.sql.includes('INSERT') ? colors.warning :
                            entry.sql.includes('UPDATE') ? '#a855f7' :
                            entry.sql.includes('DELETE') ? colors.danger :
                            entry.sql.includes('BEGIN') || entry.sql.includes('COMMIT') ? colors.accent :
-                           colors.text,
+                           colors.textSub,
                     wordBreak: 'break-all',
                     lineHeight: 1.5,
                   }}
@@ -207,7 +222,7 @@ export default function DevPanel({
                 bottom: 26,
                 width: 2,
                 bgcolor: colors.border,
-                borderRadius: 1,
+                borderRadius: '2px',
               }}
             />
             {txSteps.map((step, i) => (
@@ -232,7 +247,7 @@ export default function DevPanel({
                       : 'none',
                   }}
                 />
-                <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.68rem', color: step.status === 'done' ? colors.accent : colors.text }}>
+                <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.68rem', color: step.status === 'done' ? colors.accent : colors.textSub }}>
                   {step.label}
                 </Typography>
               </Box>
@@ -242,7 +257,7 @@ export default function DevPanel({
 
         {/* Tab 2: Ripple trace */}
         <TabPanel value={tab} index={2}>
-          <Typography variant="caption" sx={{ color: colors.muted, display: 'block', mb: 1 }}>
+          <Typography sx={{ color: colors.muted, display: 'block', mb: 1, fontSize: '0.65rem' }}>
             最近一次交易涟漪传播路径：
           </Typography>
           <Box sx={{ pl: 3, position: 'relative' }}>
@@ -254,7 +269,7 @@ export default function DevPanel({
                 bottom: 14,
                 width: 2,
                 bgcolor: `${colors.primary}44`,
-                borderRadius: 1,
+                borderRadius: '2px',
               }}
             />
             {rippleTrace.map((name, i) => (
@@ -271,7 +286,7 @@ export default function DevPanel({
                     opacity: 1 - i * 0.15,
                   }}
                 />
-                <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: i === 0 ? colors.accent : colors.text }}>
+                <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: i === 0 ? colors.accent : colors.textSub }}>
                   {name}
                 </Typography>
               </Box>
@@ -300,7 +315,7 @@ export default function DevPanel({
                       {snap.rows.map((row, ri) => (
                         <tr key={ri} style={{ background: ri % 2 === 0 ? 'rgba(0,212,255,0.02)' : 'transparent' }}>
                           {row.map((cell, ci) => (
-                            <td key={ci} style={{ padding: '3px 8px', fontFamily: 'var(--font-mono)', color: colors.text, borderBottom: `1px solid ${colors.border}22`, whiteSpace: 'nowrap' }}>{cell}</td>
+                            <td key={ci} style={{ padding: '3px 8px', fontFamily: 'var(--font-mono)', color: colors.textSub, borderBottom: `1px solid ${colors.border}22`, whiteSpace: 'nowrap' }}>{cell}</td>
                           ))}
                         </tr>
                       ))}
@@ -329,10 +344,10 @@ export default function DevPanel({
         >
           <PerfIcon sx={{ fontSize: 14, color: colors.muted }} />
           <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.6rem', color: colors.muted }}>
-            查询耗时: <span style={{ color: queryTimeMs > 50 ? colors.danger : colors.accent }}>{queryTimeMs}ms</span>
+            查询耗时: <span style={{ color: queryTimeMs > 50 ? colors.dangerHigh : colors.accent }}>{queryTimeMs}ms</span>
           </Typography>
           <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.6rem', color: colors.muted }}>
-            事务耗时: <span style={{ color: txTimeMs > 200 ? colors.danger : colors.accent }}>{txTimeMs}ms</span>
+            事务耗时: <span style={{ color: txTimeMs > 200 ? colors.dangerHigh : colors.accent }}>{txTimeMs}ms</span>
           </Typography>
         </Box>
       </Box>

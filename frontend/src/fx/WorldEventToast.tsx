@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Box, Typography, IconButton, keyframes } from '@mui/material';
+import { Box, Typography, IconButton } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import colors from '../theme/colors';
 import { WORLD_EVENT_META } from '../theme/assets';
@@ -14,11 +14,6 @@ export interface WorldEventItem {
   type: WorldEventType;
   timestamp: number;
 }
-
-const slideIn = keyframes`
-  from { transform: translateY(-100%); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
-`;
 
 const AUTO_DISMISS = 4000;
 
@@ -38,20 +33,20 @@ function ToastBar({ event, onDismiss }: { event: WorldEventItem; onDismiss: () =
         gap: 1,
         px: 2,
         py: 1,
-        bgcolor: 'rgba(10,15,30,0.95)',
+        bgcolor: 'rgba(13,17,28,0.95)',
         borderLeft: `3px solid ${style.color}`,
         boxShadow: `0 2px 12px rgba(0,0,0,0.3)`,
-        animation: `${slideIn} 0.3s ease`,
+        animation: 'slideDown 0.3s ease',
         pointerEvents: 'auto',
         maxWidth: 420,
       }}
     >
       <Box component="img" src={style.src} alt="" sx={{ width: 20, height: 20, flexShrink: 0 }} />
-      <Typography sx={{ flex: 1, fontSize: '0.72rem', color: colors.text, fontFamily: 'var(--font-body)' }}>
+      <Typography sx={{ flex: 1, fontSize: '0.72rem', color: colors.textSub, fontFamily: 'var(--font-body)' }}>
         {event.message}
       </Typography>
       <IconButton size="small" onClick={onDismiss} sx={{ color: colors.muted }}>
-        <CloseIcon sx={{ fontSize: 14 }} />
+        <CloseIcon sx={{ fontSize: 16 }} />
       </IconButton>
     </Box>
   );

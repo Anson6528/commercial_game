@@ -25,6 +25,21 @@ export interface TopHUDProps {
   disabled?: boolean;
 }
 
+/* glowing vertical divider */
+function GlowDivider() {
+  return (
+    <Box
+      sx={{
+        width: '1px',
+        height: '70%',
+        background: 'linear-gradient(180deg, transparent, rgba(0,212,255,0.3), transparent)',
+        mx: 1.5,
+        flexShrink: 0,
+      }}
+    />
+  );
+}
+
 export default function TopHUD({
   credits,
   previousCredits,
@@ -49,65 +64,76 @@ export default function TopHUD({
         height: 'var(--hud-top-height)',
         display: 'flex',
         alignItems: 'center',
-        px: 2.5,
-        gap: 3,
+        px: 3,
+        gap: 2,
         zIndex: 10,
+        background: 'rgba(10, 14, 26, 0.7)',
+        backdropFilter: 'blur(12px)',
       }}
     >
       {/* ---- 资金 ---- */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 160 }}>
-        <Box component="img" src={ASSET_PATHS.icons.uiCredits} alt="" sx={{ width: 22, height: 22, opacity: 0.9 }} />
-        <Box sx={{ display: 'flex', alignItems: 'baseline' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 180 }}>
+        <Box component="img" src={ASSET_PATHS.icons.uiCredits} alt="" sx={{ width: 28, height: 28, opacity: 0.9 }} />
+        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
           <AnimatedNumber
             value={credits}
             duration={600}
             formatted
             style={{
+              fontFamily: 'var(--font-mono)',
               fontWeight: 700,
-              fontSize: '1.1rem',
-              color:
-                creditDelta > 0 ? colors.accent :
-                creditDelta < 0 ? colors.danger :
-                colors.white,
+              fontSize: '1.5rem',
+              letterSpacing: '-0.02em',
+              color: creditDelta > 0 ? colors.successLow : creditDelta < 0 ? colors.dangerHigh : colors.textMain,
+              textShadow: creditDelta !== 0
+                ? `0 0 10px ${creditDelta > 0 ? 'rgba(0,229,160,0.4)' : 'rgba(255,71,87,0.4)'}`
+                : 'none',
             }}
           />
-          <Typography component="span" sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: colors.muted, ml: 0.5 }}>
+          <Typography component="span" sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: colors.textSub, ml: 0.5 }}>
             CR
           </Typography>
         </Box>
       </Box>
+
+      <GlowDivider />
 
       {/* ---- 状态 ---- */}
       <Chip
         label={STATUS_LABEL[status].text}
         size="small"
         sx={{
-          bgcolor: `${STATUS_LABEL[status].color}22`,
+          bgcolor: `${STATUS_LABEL[status].color}18`,
           color: STATUS_LABEL[status].color,
           fontFamily: 'var(--font-mono)',
           fontWeight: 600,
-          fontSize: '0.7rem',
+          fontSize: '0.75rem',
           letterSpacing: '0.05em',
           border: `1px solid ${STATUS_LABEL[status].color}44`,
-          height: 26,
+          height: 28,
+          borderRadius: '2px',
         }}
       />
 
+      <GlowDivider />
+
       {/* ---- 时间/年份 ---- */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 80 }}>
-        <Box component="img" src={ASSET_PATHS.icons.uiTime} alt="" sx={{ width: 18, height: 18, opacity: 0.7 }} />
-        <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: colors.text, letterSpacing: '0.05em' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 100 }}>
+        <Box component="img" src={ASSET_PATHS.icons.uiTime} alt="" sx={{ width: 20, height: 20, opacity: 0.7 }} />
+        <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: colors.textMain, letterSpacing: '0.05em' }}>
           Y-{galacticYear}
         </Typography>
       </Box>
 
+      <GlowDivider />
+
       {/* ---- 行动点 ---- */}
-      <Box sx={{ flex: 1, maxWidth: 220 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.25 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.35 }}>
-            <Box component="img" src={ASSET_PATHS.icons.uiTime} alt="" sx={{ width: 12, height: 12, opacity: 0.5 }} />
-          </Box>
-          <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', fontWeight: 600, color: colors.primary }}>
+      <Box sx={{ flex: 1, maxWidth: 240, minWidth: 140 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, alignItems: 'center' }}>
+          <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: colors.textSub }}>
+            行动点
+          </Typography>
+          <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', fontWeight: 600, color: colors.primary }}>
             {actionPoints}/{maxActionPoints}
           </Typography>
         </Box>
@@ -115,34 +141,53 @@ export default function TopHUD({
           variant="determinate"
           value={(actionPoints / maxActionPoints) * 100}
           sx={{
-            height: 4,
-            borderRadius: 2,
+            height: 5,
+            borderRadius: '2px',
             backgroundColor: 'rgba(255,255,255,0.04)',
             '& .MuiLinearProgress-bar': {
               background:
                 actionPoints / maxActionPoints > 0.3 ? colors.primary :
                 actionPoints / maxActionPoints > 0.1 ? colors.warning :
-                colors.danger,
+                colors.dangerHigh,
+              borderRadius: '2px',
             },
           }}
         />
       </Box>
 
+      <GlowDivider />
+
       {/* ---- 通缉 ---- */}
-      {wantedLevel > 0 && (
+      {wantedLevel > 0 ? (
         <Chip
           label={`WANTED Lv${wantedLevel}`}
           size="small"
           sx={{
-            bgcolor: `${colors.danger}22`,
-            color: colors.danger,
+            bgcolor: `${colors.wantedOrange}18`,
+            color: colors.wantedOrange,
             fontFamily: 'var(--font-mono)',
             fontWeight: 700,
-            fontSize: '0.65rem',
+            fontSize: '0.7rem',
             letterSpacing: '0.08em',
-            border: `1px solid ${colors.danger}44`,
-            animation: 'pulse 1.5s ease-in-out infinite',
-            height: 24,
+            border: `1px solid ${colors.wantedOrange}55`,
+            animation: 'wantedBlink 2s ease-in-out infinite',
+            height: 26,
+            borderRadius: '2px',
+          }}
+        />
+      ) : (
+        <Chip
+          label="CLEAN"
+          size="small"
+          sx={{
+            bgcolor: `${colors.accent}12`,
+            color: colors.accent,
+            fontFamily: 'var(--font-mono)',
+            fontWeight: 600,
+            fontSize: '0.7rem',
+            border: `1px solid ${colors.accent}33`,
+            height: 26,
+            borderRadius: '2px',
           }}
         />
       )}
@@ -152,17 +197,22 @@ export default function TopHUD({
         variant="contained"
         color="error"
         size="small"
-        startIcon={<Box component="img" src={ASSET_PATHS.icons.uiEnd} alt="" sx={{ width: 14, height: 14 }} />}
         onClick={onEndGame}
         disabled={disabled}
         sx={{
           ml: 'auto',
-          fontSize: '0.65rem',
+          fontSize: '0.7rem',
           letterSpacing: '0.06em',
           py: 0.75,
-          px: 2,
-          borderRadius: 1,
+          px: 2.5,
           minWidth: 0,
+          clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+          background: 'linear-gradient(180deg, rgba(255,43,109,0.2) 0%, rgba(255,43,109,0.08) 100%)',
+          border: '1px solid rgba(255,43,109,0.5)',
+          '&:hover': {
+            background: 'linear-gradient(180deg, rgba(255,43,109,0.3) 0%, rgba(255,43,109,0.15) 100%)',
+            boxShadow: '0 0 16px rgba(255,43,109,0.3)',
+          },
         }}
       >
         结束本局

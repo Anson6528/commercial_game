@@ -51,7 +51,7 @@ export default function WantedBadge({ level, score, reason, compact = false }: P
               {meta.label}
             </Typography>
             {score !== undefined && (
-              <Typography variant="caption" color="text.disabled" sx={{ fontFamily: 'var(--font-mono)' }}>
+              <Typography variant="caption" sx={{ color: colors.muted }} sx={{ fontFamily: 'var(--font-mono)' }}>
                 score: {score}
               </Typography>
             )}

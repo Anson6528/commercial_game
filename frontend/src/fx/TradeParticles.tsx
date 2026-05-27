@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Box, keyframes } from '@mui/material';
 
-const PARTICLE_COUNT = 20;
+const PARTICLE_COUNT = 24;
 const DURATION_MS = 900;
 
 const fly = (x: number, y: number) => keyframes`
@@ -10,7 +10,11 @@ const fly = (x: number, y: number) => keyframes`
   100% { transform: translate(${x}px, ${y}px) scale(0.2); opacity: 0; }
 `;
 
-const colors = ['#ffd700', '#ffb800', '#ffec8b', '#ffe066', '#fff3b0'];
+/* gold + cyan tech palette */
+const colors = [
+  '#ffd700', '#ffb800', '#ffec8b', '#ffe066', '#fff3b0',
+  '#00d4ff', '#00e5ff', '#5af7ff', '#88f7ff',
+];
 
 interface Particle {
   id: number;

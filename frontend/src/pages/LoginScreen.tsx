@@ -1,13 +1,7 @@
 import { useState } from 'react';
-import { Box, Typography, TextField, Button, keyframes } from '@mui/material';
+import { Box, Typography, TextField, Button } from '@mui/material';
 import colors from '../theme/colors';
 
-const float = keyframes`
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-6px); }
-`;
-
-/* pre-generated static particles (module level to avoid impure render) */
 const PARTICLES = Array.from({ length: 40 }, (_, i) => ({
   id: i,
   left: `${((i * 37 + 13) % 100)}%`,
@@ -63,7 +57,7 @@ export default function LoginScreen({ onEnter }: Props) {
               opacity: p.opacity,
               left: p.left,
               top: p.top,
-              animation: `${float} ${p.duration}s ease-in-out infinite`,
+              animation: `float ${p.duration}s ease-in-out infinite`,
               animationDelay: `${p.delay}s`,
             }}
           />
@@ -71,11 +65,14 @@ export default function LoginScreen({ onEnter }: Props) {
       </Box>
 
       <Typography
-        variant="h2"
         sx={{
+          fontFamily: 'var(--font-heading)',
+          fontSize: '2.5rem',
           color: colors.white,
           textAlign: 'center',
           animation: 'fadeIn 0.8s ease',
+          textShadow: `0 0 24px ${colors.glowStrong}, 0 0 48px ${colors.glow}`,
+          letterSpacing: '0.04em',
         }}
       >
         星际货运垄断者
@@ -84,6 +81,7 @@ export default function LoginScreen({ onEnter }: Props) {
       <Box
         component="form"
         onSubmit={handleSubmit}
+        className="glass-panel"
         sx={{
           width: 380,
           maxWidth: '90vw',
@@ -91,14 +89,11 @@ export default function LoginScreen({ onEnter }: Props) {
           flexDirection: 'column',
           gap: 2,
           p: 3,
-          borderRadius: 1,
-          bgcolor: 'rgba(16,20,35,0.9)',
-          border: `1px solid ${colors.border}`,
-          boxShadow: `0 0 32px ${colors.glow}`,
+          borderRadius: '4px',
           animation: 'fadeIn 0.8s ease 0.3s both',
         }}
       >
-        <Typography variant="body2" sx={{ color: colors.text, textAlign: 'center' }}>
+        <Typography sx={{ fontSize: '0.85rem', color: colors.textSub, textAlign: 'center' }}>
           输入你的货运代号，进入星际市场
         </Typography>
 
@@ -111,7 +106,15 @@ export default function LoginScreen({ onEnter }: Props) {
           slotProps={{
             htmlInput: {
               maxLength: 16,
-              style: { fontFamily: 'var(--font-mono)', textAlign: 'center', fontSize: '1.1rem' },
+              style: { fontFamily: 'var(--font-mono)', textAlign: 'center', fontSize: '1.1rem', color: colors.textMain },
+            },
+          }}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              borderRadius: '2px',
+              '& fieldset': { borderColor: colors.border },
+              '&:hover fieldset': { borderColor: colors.borderHover },
+              '&.Mui-focused fieldset': { borderColor: colors.primary },
             },
           }}
         />
@@ -119,16 +122,26 @@ export default function LoginScreen({ onEnter }: Props) {
         <Button
           type="submit"
           variant="contained"
-          color="primary"
-          size="large"
           disabled={!name.trim()}
-          sx={{ py: 1.5, fontSize: '0.9rem' }}
+          className="tech-button"
+          sx={{
+            py: 1.5,
+            fontSize: '0.9rem',
+            fontFamily: 'var(--font-heading)',
+            letterSpacing: '0.05em',
+            clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
+            background: 'linear-gradient(180deg, rgba(0,212,255,0.18) 0%, rgba(0,212,255,0.06) 100%)',
+            border: `1px solid ${colors.borderHover}`,
+            color: colors.white,
+            '&:hover': { boxShadow: `0 0 20px ${colors.glowStrong}` },
+            '&.Mui-disabled': { opacity: 0.35, color: colors.muted },
+          }}
         >
           进入游戏
         </Button>
       </Box>
 
-      <Typography variant="caption" sx={{ color: colors.muted, fontFamily: 'var(--font-mono)' }}>
+      <Typography sx={{ color: colors.muted, fontFamily: 'var(--font-mono)', fontSize: '0.65rem' }}>
         openGauss 课程大作业 · 2026
       </Typography>
     </Box>

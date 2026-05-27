@@ -1,14 +1,15 @@
 import { useEffect, useState, useRef } from 'react';
-import { Box, Typography, Button, Stack, keyframes } from '@mui/material';
-import { Replay as ReplayIcon, Home as HomeIcon, EmojiEvents as TrophyIcon } from '@mui/icons-material';
+import { Box, Typography, Button } from '@mui/material';
+import { Replay as ReplayIcon, Home as HomeIcon } from '@mui/icons-material';
+import colors from '../theme/colors';
 import { SETTLEMENT_EMOJI } from '../theme/assets';
 
 /* ---- types ---- */
 export interface ScoreBreakdown {
-  creditsBonus: number;   // 资金 × 0.5
-  monopolyBonus: number;  // 垄断数 × 5000
-  tradeBonus: number;     // 交易次数 × 100
-  eventBonus: number;     // 事件数 × 200
+  creditsBonus: number;
+  monopolyBonus: number;
+  tradeBonus: number;
+  eventBonus: number;
   total: number;
 }
 
@@ -27,17 +28,6 @@ interface Props {
   onReplay?: () => void;
   onHome?: () => void;
 }
-
-/* ---- animations ---- */
-const fadeIn = keyframes`
-  from { opacity: 0; transform: translateY(30px); }
-  to   { opacity: 1; transform: translateY(0); }
-`;
-
-const glow = keyframes`
-  0%, 100% { box-shadow: 0 0 40px rgba(0,212,170,0.15); }
-  50%      { box-shadow: 0 0 80px rgba(0,212,170,0.35); }
-`;
 
 /* ---- counting number hook ---- */
 function useCountUp(target: number, duration: number, start: boolean) {
@@ -70,7 +60,7 @@ function useCountUp(target: number, duration: number, start: boolean) {
   return value;
 }
 
-function ScoreRow({ label, value, delay, color = '#e8eaed' }: {
+function ScoreRow({ label, value, delay, color = colors.textMain }: {
   label: string; value: number; delay: number; color?: string;
 }) {
   const [visible, setVisible] = useState(false);
@@ -89,16 +79,16 @@ function ScoreRow({ label, value, delay, color = '#e8eaed' }: {
         alignItems: 'baseline',
         py: 1,
         px: 2,
-        borderBottom: '1px solid rgba(0,212,170,0.06)',
-        animation: visible ? `${fadeIn} 0.5s ease both` : 'none',
+        borderBottom: `1px solid ${colors.border}`,
+        animation: visible ? 'fadeIn 0.5s ease both' : 'none',
         opacity: visible ? 1 : 0,
       }}
     >
-      <Typography variant="body1" color="text.secondary">
+      <Typography sx={{ fontSize: '0.85rem', color: colors.textSub }}>
         {label}
       </Typography>
-      <Typography variant="body1" sx={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.95rem', color }}>
-        {count.toLocaleString()} cr
+      <Typography sx={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.95rem', color }}>
+        {count.toLocaleString()} CR
       </Typography>
     </Box>
   );
@@ -114,6 +104,8 @@ export default function SettlementScreen({ data, onReplay, onHome }: Props) {
   }, []);
 
   const isWin = data.result === 'won';
+  const resultColor = isWin ? colors.successLow : data.result === 'lost' ? colors.dangerHigh : colors.warning;
+  const resultTitle = isWin ? '贸易垄断达成' : data.result === 'lost' ? '破产清算' : '时间耗尽';
 
   return (
     <Box
@@ -127,7 +119,7 @@ export default function SettlementScreen({ data, onReplay, onHome }: Props) {
         justifyContent: 'center',
         overflow: 'auto',
         py: 4,
-        bgcolor: isWin ? 'rgba(0,212,170,0.03)' : 'rgba(239,68,68,0.03)',
+        bgcolor: 'rgba(10,14,26,0.85)',
         backdropFilter: 'blur(12px)',
       }}
     >
@@ -138,58 +130,66 @@ export default function SettlementScreen({ data, onReplay, onHome }: Props) {
           width: 360,
           height: 360,
           borderRadius: '50%',
-          background: isWin
-            ? 'radial-gradient(circle, rgba(0,212,170,0.12) 0%, transparent 70%)'
-            : 'radial-gradient(circle, rgba(239,68,68,0.12) 0%, transparent 70%)',
-          animation: `${glow} 3s ease-in-out infinite`,
+          background: `radial-gradient(circle, ${resultColor}18 0%, transparent 70%)`,
+          animation: 'glowPulse 3s ease-in-out infinite',
           pointerEvents: 'none',
         }}
       />
 
-      <Stack spacing={2} sx={{ position: 'relative', zIndex: 1, alignItems: 'center' }}>
+      <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2.5 }}>
         {/* ---- result icon ---- */}
-        <Box sx={{ textAlign: 'center', animation: `${fadeIn} 0.6s ease both` }}>
+        <Box sx={{ textAlign: 'center', animation: 'fadeIn 0.6s ease both' }}>
           <Box sx={{ fontSize: 48, mb: 1, lineHeight: 1 }}>
             {SETTLEMENT_EMOJI[data.result] ?? SETTLEMENT_EMOJI.timeup}
           </Box>
           <Typography
-            variant="h5"
-            sx={{ color: isWin ? '#00d4aa' : data.result === 'lost' ? '#ef4444' : '#f59e0b' }}
+            sx={{
+              fontFamily: 'var(--font-heading)',
+              fontSize: '1.3rem',
+              color: resultColor,
+              letterSpacing: '0.04em',
+              textShadow: `0 0 20px ${resultColor}44`,
+            }}
           >
-            {isWin ? 'MONOPOLY VICTORY' : data.result === 'lost' ? 'BANKRUPT' : 'TIME\'S UP'}
+            {resultTitle}
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+          <Typography sx={{ fontSize: '0.78rem', color: colors.textSub, mt: 0.5, fontFamily: 'var(--font-mono)' }}>
             {data.playerName}
           </Typography>
         </Box>
 
         {/* ---- score breakdown ---- */}
         <Box
-          className="modal-panel"
+          className="glass-panel"
           sx={{
-            width: 340,
-            maxWidth: '88vw',
-            bgcolor: 'rgba(17,22,51,0.9)',
-            borderRadius: 2,
-            border: '1px solid rgba(0,212,170,0.12)',
+            width: 380,
+            maxWidth: '92vw',
+            borderRadius: '4px',
+            border: `1px solid ${resultColor}33`,
             overflow: 'hidden',
-            animation: `${fadeIn} 0.6s ease 0.3s both`,
+            animation: 'fadeIn 0.6s ease 0.3s both',
           }}
         >
-          <Box sx={{ px: 2.5, py: 1.25, borderBottom: '1px solid rgba(0,212,170,0.08)' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-              <TrophyIcon sx={{ color: isWin ? '#00d4aa' : '#f59e0b' }} />
-              <Typography variant="h6">Final Score</Typography>
-            </Box>
-            <Typography variant="caption" color="text.secondary">
-              Credits × 0.5 + Monopoly × 5,000 + Trades × 100 + Events × 200
+          <Box sx={{ px: 2.5, py: 1.5, borderBottom: `1px solid ${colors.border}` }}>
+            <Typography
+              sx={{
+                fontFamily: 'var(--font-heading)',
+                fontSize: '0.85rem',
+                letterSpacing: '0.06em',
+                color: colors.textMain,
+              }}
+            >
+              结算明细
+            </Typography>
+            <Typography sx={{ fontSize: '0.65rem', color: colors.muted, mt: 0.25, fontFamily: 'var(--font-mono)' }}>
+              资金 × 0.5 + 垄断 × 5,000 + 交易 × 100 + 事件 × 200
             </Typography>
           </Box>
 
-          <ScoreRow label="Credits Bonus"       value={data.breakdown.creditsBonus}  delay={500} />
-          <ScoreRow label="Monopoly Bonus"      value={data.breakdown.monopolyBonus} delay={800}  color={data.monopolyCount > 0 ? '#00d4aa' : '#e8eaed'} />
-          <ScoreRow label="Trade Activity"      value={data.breakdown.tradeBonus}    delay={1100} />
-          <ScoreRow label="Event Participation" value={data.breakdown.eventBonus}    delay={1400} />
+          <ScoreRow label="资金加成" value={data.breakdown.creditsBonus} delay={500} />
+          <ScoreRow label="垄断加成" value={data.breakdown.monopolyBonus} delay={800} color={data.monopolyCount > 0 ? colors.successLow : colors.textMain} />
+          <ScoreRow label="交易活跃" value={data.breakdown.tradeBonus} delay={1100} />
+          <ScoreRow label="事件参与" value={data.breakdown.eventBonus} delay={1400} />
 
           {/* total */}
           <Box
@@ -199,69 +199,93 @@ export default function SettlementScreen({ data, onReplay, onHome }: Props) {
               alignItems: 'baseline',
               py: 1.5,
               px: 3,
-              bgcolor: isWin ? 'rgba(0,212,170,0.08)' : 'rgba(255,255,255,0.03)',
-              animation: `${fadeIn} 0.5s ease 1.7s both`,
+              bgcolor: `${resultColor}10`,
+              animation: 'fadeIn 0.5s ease 1.7s both',
               opacity: show ? 1 : 0,
             }}
           >
-            <Typography variant="body1" sx={{ fontWeight: 600 }}>Total</Typography>
+            <Typography sx={{ fontWeight: 600, color: colors.textMain, fontSize: '0.9rem' }}>总计</Typography>
             <Typography
-              variant="h5"
               sx={{
                 fontFamily: 'var(--font-mono)',
                 fontWeight: 800,
-                color: isWin ? '#00d4aa' : '#f59e0b',
+                fontSize: '1.25rem',
+                color: resultColor,
+                textShadow: `0 0 12px ${resultColor}33`,
               }}
             >
               {show ? (
                 <CountUpFinal value={data.breakdown.total} start={show} />
-              ) : '0'}
+              ) : '0 CR'}
             </Typography>
           </Box>
 
           {/* quick stats */}
-          <Box sx={{ px: 2.5, py: 1, display: 'flex', justifyContent: 'space-around', borderTop: '1px solid rgba(0,212,170,0.06)' }}>
+          <Box sx={{ px: 2.5, py: 1.25, display: 'flex', justifyContent: 'space-around', borderTop: `1px solid ${colors.border}` }}>
             {[
-              ['Final Credits', data.finalCredits.toLocaleString()],
-              ['Monopolies', String(data.monopolyCount)],
-              ['Trades', String(data.tradeCount)],
-              ['Events', String(data.eventCount)],
+              ['最终资金', data.finalCredits.toLocaleString()],
+              ['垄断数', String(data.monopolyCount)],
+              ['交易次数', String(data.tradeCount)],
+              ['事件数', String(data.eventCount)],
             ].map(([label, val]) => (
               <Box key={label} sx={{ textAlign: 'center' }}>
-                <Typography variant="caption" color="text.disabled">{label}</Typography>
-                <Typography variant="body2" sx={{ fontFamily: 'var(--font-mono)' }}>{val}</Typography>
+                <Typography sx={{ fontSize: '0.6rem', color: colors.muted, fontFamily: 'var(--font-mono)' }}>{label}</Typography>
+                <Typography sx={{ fontSize: '0.78rem', color: colors.textMain, fontFamily: 'var(--font-mono)', fontWeight: 600, mt: 0.25 }}>{val}</Typography>
               </Box>
             ))}
           </Box>
         </Box>
 
         {/* ---- actions ---- */}
-        <Stack
-          direction="row"
-          spacing={2}
-          sx={{ animation: `${fadeIn} 0.6s ease 2s both`, opacity: show ? 1 : 0 }}
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 2,
+            animation: 'fadeIn 0.6s ease 2s both',
+            opacity: show ? 1 : 0,
+          }}
         >
           <Button
+            className="tech-button"
             variant="contained"
-            color="primary"
-            size="medium"
             startIcon={<ReplayIcon />}
             onClick={onReplay}
-            sx={{ px: 3, py: 1 }}
+            sx={{
+              px: 4,
+              py: 1,
+              fontFamily: 'var(--font-heading)',
+              fontSize: '0.85rem',
+              letterSpacing: '0.05em',
+              clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+              background: 'linear-gradient(180deg, rgba(0,212,255,0.18) 0%, rgba(0,212,255,0.06) 100%)',
+              border: `1px solid ${colors.borderHover}`,
+              color: colors.white,
+              '&:hover': { boxShadow: `0 0 16px ${colors.glowStrong}` },
+            }}
           >
-            Play Again
+            再来一局
           </Button>
           <Button
+            className="tech-button"
             variant="outlined"
-            size="medium"
             startIcon={<HomeIcon />}
             onClick={onHome}
-            sx={{ px: 3, py: 1 }}
+            sx={{
+              px: 4,
+              py: 1,
+              fontFamily: 'var(--font-heading)',
+              fontSize: '0.85rem',
+              letterSpacing: '0.05em',
+              clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+              borderColor: colors.border,
+              color: colors.textSub,
+              '&:hover': { borderColor: colors.primary, color: colors.primary, bgcolor: 'rgba(0,212,255,0.04)' },
+            }}
           >
-            Main Menu
+            返回大厅
           </Button>
-        </Stack>
-      </Stack>
+        </Box>
+      </Box>
     </Box>
   );
 }
@@ -269,5 +293,5 @@ export default function SettlementScreen({ data, onReplay, onHome }: Props) {
 /* ---- small helper for final total counting up ---- */
 function CountUpFinal({ value, start }: { value: number; start: boolean }) {
   const count = useCountUp(value, 1800, start);
-  return <>{count.toLocaleString()} cr</>;
+  return <>{count.toLocaleString()} CR</>;
 }
