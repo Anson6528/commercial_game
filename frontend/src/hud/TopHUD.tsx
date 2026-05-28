@@ -3,29 +3,27 @@ import AnimatedNumber from '../fx/AnimatedNumber';
 import colors from '../theme/colors';
 import { ASSET_PATHS } from '../theme/assets';
 
-/* ---- types ---- */
 export type PlayerStatus = 'EXPLORING' | 'TRAVELING' | 'TRADING' | 'DETAINED';
 
 const STATUS_LABEL: Record<PlayerStatus, { text: string; color: string }> = {
   EXPLORING: { text: '自由探索', color: colors.accent },
   TRAVELING: { text: '航行中', color: colors.primary },
-  TRADING:   { text: '交易中', color: colors.warning },
-  DETAINED:  { text: '被扣留', color: colors.danger },
+  TRADING: { text: '交易中', color: colors.warning },
+  DETAINED: { text: '被扣留', color: colors.danger },
 };
 
 export interface TopHUDProps {
   credits: number;
   previousCredits?: number;
   status: PlayerStatus;
-  galacticYear: number;
-  actionPoints: number;
-  maxActionPoints: number;
+  startYear: number;
+  currentYear: number;
+  endYear: number;
   wantedLevel: number;
   onEndGame: () => void;
   disabled?: boolean;
 }
 
-/* glowing vertical divider */
 function GlowDivider() {
   return (
     <Box
@@ -44,14 +42,17 @@ export default function TopHUD({
   credits,
   previousCredits,
   status,
-  galacticYear,
-  actionPoints,
-  maxActionPoints,
+  startYear,
+  currentYear,
+  endYear,
   wantedLevel,
   onEndGame,
   disabled,
 }: TopHUDProps) {
   const creditDelta = previousCredits ? credits - previousCredits : 0;
+  const totalYears = Math.max(1, endYear - startYear);
+  const elapsedYears = Math.max(0, currentYear - startYear);
+  const yearProgress = Math.min(100, Math.max(0, (elapsedYears / totalYears) * 100));
 
   return (
     <Box
@@ -71,7 +72,6 @@ export default function TopHUD({
         backdropFilter: 'blur(12px)',
       }}
     >
-      {/* ---- 资金 ---- */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 180 }}>
         <Box component="img" src={ASSET_PATHS.icons.uiCredits} alt="" sx={{ width: 28, height: 28, opacity: 0.9 }} />
         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
@@ -85,9 +85,10 @@ export default function TopHUD({
               fontSize: '1.5rem',
               letterSpacing: '-0.02em',
               color: creditDelta > 0 ? colors.successLow : creditDelta < 0 ? colors.dangerHigh : colors.textMain,
-              textShadow: creditDelta !== 0
-                ? `0 0 10px ${creditDelta > 0 ? 'rgba(0,229,160,0.4)' : 'rgba(255,71,87,0.4)'}`
-                : 'none',
+              textShadow:
+                creditDelta !== 0
+                  ? `0 0 10px ${creditDelta > 0 ? 'rgba(0,229,160,0.4)' : 'rgba(255,71,87,0.4)'}`
+                  : 'none',
             }}
           />
           <Typography component="span" sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: colors.textSub, ml: 0.5 }}>
@@ -98,7 +99,6 @@ export default function TopHUD({
 
       <GlowDivider />
 
-      {/* ---- 状态 ---- */}
       <Chip
         label={STATUS_LABEL[status].text}
         size="small"
@@ -117,38 +117,33 @@ export default function TopHUD({
 
       <GlowDivider />
 
-      {/* ---- 时间/年份 ---- */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 100 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 140 }}>
         <Box component="img" src={ASSET_PATHS.icons.uiTime} alt="" sx={{ width: 20, height: 20, opacity: 0.7 }} />
         <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: colors.textMain, letterSpacing: '0.05em' }}>
-          Y-{galacticYear}
+          Y-{currentYear} / {endYear}
         </Typography>
       </Box>
 
       <GlowDivider />
 
-      {/* ---- 行动点 ---- */}
-      <Box sx={{ flex: 1, maxWidth: 240, minWidth: 140 }}>
+      <Box sx={{ flex: 1, maxWidth: 260, minWidth: 160 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, alignItems: 'center' }}>
           <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: colors.textSub }}>
-            行动点
+            世界年份
           </Typography>
           <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', fontWeight: 600, color: colors.primary }}>
-            {actionPoints}/{maxActionPoints}
+            {elapsedYears}/{totalYears}
           </Typography>
         </Box>
         <LinearProgress
           variant="determinate"
-          value={(actionPoints / maxActionPoints) * 100}
+          value={yearProgress}
           sx={{
             height: 5,
             borderRadius: '2px',
             backgroundColor: 'rgba(255,255,255,0.04)',
             '& .MuiLinearProgress-bar': {
-              background:
-                actionPoints / maxActionPoints > 0.3 ? colors.primary :
-                actionPoints / maxActionPoints > 0.1 ? colors.warning :
-                colors.dangerHigh,
+              background: yearProgress < 55 ? colors.primary : yearProgress < 80 ? colors.warning : colors.dangerHigh,
               borderRadius: '2px',
             },
           }}
@@ -157,7 +152,6 @@ export default function TopHUD({
 
       <GlowDivider />
 
-      {/* ---- 通缉 ---- */}
       {wantedLevel > 0 ? (
         <Chip
           label={`WANTED Lv${wantedLevel}`}
@@ -192,7 +186,6 @@ export default function TopHUD({
         />
       )}
 
-      {/* ---- 结束按钮 ---- */}
       <Button
         variant="contained"
         color="error"

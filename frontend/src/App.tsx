@@ -1,369 +1,664 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Provider } from 'react-redux';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { Box, Button } from '@mui/material';
-import { store } from './store';
-import { setPlanets, setConnections } from './store/starMapSlice';
+import { Box } from '@mui/material';
+import {
+  store,
+  setConnections,
+  setPlanets,
+  setSession,
+  setSessionLoading,
+  closeTradeModal,
+  setTradeError,
+  setTradeModalLoading,
+  setTradeSelectedGoods,
+  setTradeSubmitting,
+  beginTradeAction,
+  closeEncounter,
+  finishTurnResolution,
+  setEncounterResolving,
+} from './store';
 import theme from './theme/theme';
 import './theme/global.css';
 import LoginScreen from './pages/LoginScreen';
 import LobbyScreen from './pages/LobbyScreen';
 import GameScene from './pages/GameScene';
 import LoadingSpinner from './fx/LoadingSpinner';
-import TradeModal from './modals/TradeModal';
-import type { GoodsCard, CargoSlotItem } from './modals/TradeModal';
-import { MiniTradePanel } from './modals/TradeModal';
-import EncounterModal from './modals/EncounterModal';
 import SettlementScreen from './modals/SettlementScreen';
 import type { SettlementData } from './modals/SettlementScreen';
 import DevPanel from './modals/DevPanel';
-import { pushWorldToast } from './fx/worldEventBus';
-import { fetchStarMap } from './api/starMapApi';
-import type { TopHUDProps } from './hud/TopHUD';
-import type { RightCargoPanelProps } from './hud/RightCargoPanel';
-import type { BottomInfoBarProps } from './hud/BottomInfoBar';
+import TradeModal, { MiniTradePanel } from './modals/TradeModal';
+import type { GoodsCard, CargoSlotItem } from './modals/TradeModal';
+import WarehousePanel from './modals/WarehousePanel';
+import EncounterModal from './modals/EncounterModal';
+import LeaderboardModal from './modals/LeaderboardModal';
+import { authGateway, gameGateway } from './gateways';
+import type { AccountRecord, LeaderboardEntry, LoginPayload, RegisterPayload } from './api/authApi';
+import type { RouteData, StationData, StationInventoryItem } from './game/types';
+import { checkVictoryState, computeGalaxyMonopolyProgress, computeRegionMonopolyState } from './game/monopolyService';
 import colors from './theme/colors';
+import { useAppSelector } from './store/hooks';
+import { pushWorldToast } from './fx/worldEventBus';
 
-/* ---- HUD mock data ---- */
-const MOCK_TOP_HUD: Omit<TopHUDProps, 'onEndGame'> = {
-  credits: 12450,
-  previousCredits: 13000,
-  status: 'EXPLORING',
-  galacticYear: 2149,
-  actionPoints: 47,
-  maxActionPoints: 100,
-  wantedLevel: 1,
-};
+type Screen = 'login' | 'lobby' | 'loading' | 'game';
 
-const MOCK_CARGO_SLOTS: RightCargoPanelProps['slots'] = [
-  { goodsId: 2, goodsName: '高能晶体', quantity: 12, avgCost: 340, isContraband: false },
-  { goodsId: 5, goodsName: '医疗药剂', quantity: 5, avgCost: 180, isContraband: false },
-  { goodsId: 8, goodsName: '走私艺术品', quantity: 3, avgCost: 1200, isContraband: true },
-  null, null, null, null, null,
-];
-
-const MOCK_MONOPOLY: BottomInfoBarProps['monopolyItems'] = [
-  { goodsId: 1, goodsName: '标准矿石', shortName: '矿石', icon: '', ratio: 0.45 },
-  { goodsId: 2, goodsName: '高能晶体', shortName: '晶体', icon: '', ratio: 0.72 },
-  { goodsId: 3, goodsName: '精密零件', shortName: '零件', icon: '', ratio: 0.83 },
-  { goodsId: 4, goodsName: '星际芯片', shortName: '芯片', icon: '', ratio: 0.30 },
-  { goodsId: 5, goodsName: '医疗药剂', shortName: '药剂', icon: '', ratio: 0.55 },
-  { goodsId: 6, goodsName: '生物样本', shortName: '样本', icon: '', ratio: 0.18 },
-  { goodsId: 7, goodsName: '暗物质核心', shortName: '暗物质', icon: '', ratio: 0.91 },
-  { goodsId: 8, goodsName: '走私艺术品', shortName: '艺术品', icon: '', ratio: 0.68 },
-];
-
-/* ---- trade modal mock ---- */
-const MOCK_STATION_GOODS: GoodsCard[] = [
-  {
-    goodsId: 1, goodsName: '标准矿石', currentPrice: 280, stock: 45, isContraband: false, isLocked: false,
-    maxStock: 90
-  },
-  {
-    goodsId: 2, goodsName: '高能晶体', currentPrice: 340, previousPrice: 380, stock: 12, isContraband: false, isLocked: false,
-    maxStock: 24
-  },
-  {
-    goodsId: 3, goodsName: '精密零件', currentPrice: 1200, stock: 8, isContraband: false, isLocked: true, lockReason: '通缉等级限制',
-    maxStock: 16
-  },
-  {
-    goodsId: 4, goodsName: '星际芯片', currentPrice: 580, previousPrice: 520, stock: 22, isContraband: false, isLocked: false,
-    maxStock: 44
-  },
-  {
-    goodsId: 5, goodsName: '医疗药剂', currentPrice: 180, stock: 60, isContraband: false, isLocked: false,
-    maxStock: 120
-  },
-  {
-    goodsId: 8, goodsName: '走私艺术品', currentPrice: 1200, stock: 5, isContraband: true, isLocked: false,
-    maxStock: 10
-  },
-];
-
-const MOCK_CARGO: CargoSlotItem[] = [
-  { goodsId: 2, goodsName: '高能晶体', quantity: 12, avgCost: 340 },
-  { goodsId: 5, goodsName: '医疗药剂', quantity: 5, avgCost: 180 },
-  { goodsId: 8, goodsName: '走私艺术品', quantity: 3, avgCost: 1200, isContraband: true },
-];
-
-/* ---- encounter mock ---- */
-const MOCK_ENCOUNTER = {
-  title: '暗影走私商',
-  description: '一艘未标识的飞船向你发来加密通讯。船长声称有一批高能晶体，愿意以低于市场价 30% 的价格出售。但通讯中隐约可见飞船侧舷的通缉标志...',
-  choices: [
-    { choiceId: 1, text: '接受货物', consequenceHint: '风险：+50 可疑度 | 收益：+20 单位高能晶体' },
-    { choiceId: 2, text: '举报走私商', consequenceHint: '风险：无 | 收益：+500 CR 奖金' },
-    { choiceId: 3, text: '假装没看见并离开', consequenceHint: '风险：无 | 收益：无' },
-  ],
-};
-
-/* ---- settlement mock ---- */
-const MOCK_SETTLEMENT: SettlementData = {
-  result: 'won',
-  playerName: '星际物流长',
-  finalCredits: 45200,
-  monopolyCount: 2,
-  tradeCount: 34,
-  eventCount: 7,
-  breakdown: {
-    creditsBonus: 22600,
-    monopolyBonus: 10000,
-    tradeBonus: 3400,
-    eventBonus: 1400,
-    total: 37400,
-  },
-};
-
-/* ---- loading messages ---- */
 const LOADING_MESSAGES = [
   '正在初始化星图网络...',
-  '正在同步市场数据...',
+  '正在同步星际航线...',
   '正在校准跃迁引擎...',
 ];
 
-/* ---- app state ---- */
-type Screen = 'login' | 'lobby' | 'loading' | 'game';
+const DEFAULT_SETTLEMENT: SettlementData = {
+  result: 'timeup',
+  playerName: 'Pilot',
+  finalCredits: 10000,
+  monopolyCount: 0,
+  tradeCount: 0,
+  eventCount: 0,
+  breakdown: {
+    creditsBonus: 5000,
+    monopolyBonus: 0,
+    tradeBonus: 0,
+    eventBonus: 0,
+    total: 5000,
+  },
+};
 
-export default function App() {
+function mapRoutes(routes: RouteData[]) {
+  return routes.map((route) => ({
+    from: route.from,
+    to: route.to,
+    travelCost: route.travelCost,
+  }));
+}
+
+function mapPlanets(stations: StationData[]) {
+  return stations.map((station) => ({
+    id: station.id,
+    name: station.name,
+    x: station.x,
+    y: station.y,
+    faction: station.faction,
+  }));
+}
+
+function toCargoSlots(sessionCargo: CargoSlotItem[]) {
+  return sessionCargo.length
+    ? [...sessionCargo, ...Array.from({ length: Math.max(0, 8 - sessionCargo.length) }, () => null)].slice(0, 8)
+    : Array.from({ length: 8 }, () => null);
+}
+
+function toGoodsCard(inventoryItem: StationInventoryItem, stationGoodsName: string, isContraband: boolean): GoodsCard {
+  const previousPrice =
+    inventoryItem.priceHistory.length > 1
+      ? inventoryItem.priceHistory[inventoryItem.priceHistory.length - 2]
+      : undefined;
+
+  return {
+    goodsId: inventoryItem.goodsId,
+    goodsName: stationGoodsName,
+    currentPrice: inventoryItem.currentPrice,
+    previousPrice,
+    avgPrice: inventoryItem.basePrice,
+    stock: inventoryItem.stock,
+    maxStock: Math.max(inventoryItem.stock, inventoryItem.basePrice > 800 ? 18 : inventoryItem.basePrice > 500 ? 48 : 120),
+    isContraband,
+    isLocked: false,
+  };
+}
+
+function AppContent() {
+  const session = useAppSelector((state) => state.session.current);
+  const hoveredPlanetId = useAppSelector((state) => state.starMap.hoveredPlanetId);
+  const hoveredMoveCost = useAppSelector((state) => state.starMap.hoveredMoveCost);
   const [screen, setScreen] = useState<Screen>('login');
-  const [playerName, setPlayerName] = useState('');
-  const canvasRef = useRef<HTMLDivElement | null>(null);
-
-  /* ---- modal demo state ---- */
-  const [tradeOpen, setTradeOpen] = useState(false);
-  const [miniTrade, setMiniTrade] = useState<GoodsCard | null>(null);
-  const [encounterOpen, setEncounterOpen] = useState(false);
-  const [encounterResult, setEncounterResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [account, setAccount] = useState<AccountRecord | null>(null);
+  const [loadingMsg, setLoadingMsg] = useState(LOADING_MESSAGES[0]);
   const [settlementOpen, setSettlementOpen] = useState(false);
   const [devOpen, setDevOpen] = useState(false);
+  const [warehouseOpen, setWarehouseOpen] = useState(false);
+  const [regionViewActive, setRegionViewActive] = useState(false);
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+  const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardEntry[]>([]);
+  const [scoreRecorded, setScoreRecorded] = useState(false);
 
-  /* ---- loading sequence ---- */
-  const [loadingMsg, setLoadingMsg] = useState(LOADING_MESSAGES[0]);
+  useEffect(() => {
+    const currentAccount = authGateway.getCurrentAccount();
+    if (currentAccount) {
+      setAccount(currentAccount);
+      setScreen('lobby');
+    }
 
-  const handleEnter = useCallback((name: string) => {
-    setPlayerName(name);
+    const stored = gameGateway.restoreSession();
+    if (!stored) return;
+
+    store.dispatch(setSession(stored));
+    store.dispatch(setPlanets(mapPlanets(stored.stations)));
+    store.dispatch(setConnections(mapRoutes(stored.routes)));
+    if (currentAccount) {
+      setScreen('game');
+    }
+    if (stored.player.status === 'WON' || stored.player.status === 'LOST' || stored.player.status === 'TIMEUP') {
+      setSettlementOpen(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!session) return;
+    gameGateway.persistSession(session);
+  }, [session]);
+
+  useEffect(() => {
+    if (screen !== 'game') return;
+
+    function onKey(event: KeyboardEvent) {
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+      if ((event.ctrlKey || event.altKey) && (event.key === '`' || event.key === 'd' || event.key === 'D')) {
+        event.preventDefault();
+        setDevOpen((value) => !value);
+      }
+    }
+
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [screen]);
+
+  const handleLogin = useCallback(async (payload: LoginPayload) => {
+    const result = await authGateway.login(payload);
+    if (!result.ok) return result;
+    setAccount(result.account);
     setScreen('lobby');
+    return result;
+  }, []);
+
+  const handleRegister = useCallback(async (payload: RegisterPayload) => {
+    const result = await authGateway.register(payload);
+    if (!result.ok) return result;
+    setAccount(result.account);
+    setScreen('lobby');
+    return result;
   }, []);
 
   const handleStartGame = useCallback(async () => {
+    if (!account) return;
     setScreen('loading');
-    let i = 0;
-    const iv = setInterval(() => {
-      i++;
-      if (i < LOADING_MESSAGES.length) setLoadingMsg(LOADING_MESSAGES[i]);
+    store.dispatch(setSessionLoading(true));
+    setScoreRecorded(false);
+    let index = 0;
+    const intervalId = window.setInterval(() => {
+      index += 1;
+      if (index < LOADING_MESSAGES.length) {
+        setLoadingMsg(LOADING_MESSAGES[index]);
+      }
     }, 500);
 
-    // load star map data in parallel with loading animation
-    const [starMapData] = await Promise.all([
-      fetchStarMap(),
-      new Promise((r) => setTimeout(r, 1600)),
-    ]);
+    try {
+      const [sessionData] = await Promise.all([
+        gameGateway.startSession(account.nickname),
+        new Promise((resolve) => setTimeout(resolve, 1500)),
+      ]);
 
-    clearInterval(iv);
-    store.dispatch(setPlanets(starMapData.planets));
-    store.dispatch(setConnections(starMapData.connections));
-    setScreen('game');
-  }, []);
+      store.dispatch(setSession(sessionData));
+      store.dispatch(setPlanets(mapPlanets(sessionData.stations)));
+      store.dispatch(setConnections(mapRoutes(sessionData.routes)));
+      setScreen('game');
+      setSettlementOpen(false);
+    } finally {
+      window.clearInterval(intervalId);
+      store.dispatch(setSessionLoading(false));
+    }
+  }, [account]);
 
   const handleEndGame = useCallback(() => {
     setSettlementOpen(true);
   }, []);
 
   const handleLogout = useCallback(() => {
+    void authGateway.logout();
+    setAccount(null);
     setScreen('login');
-    setPlayerName('');
+    setLeaderboardOpen(false);
   }, []);
 
-  /* ---- keyboard shortcuts for demos ---- */
+  const handleOpenLeaderboard = useCallback(async () => {
+    const entries = await authGateway.getLeaderboard();
+    setLeaderboardEntries(entries);
+    setLeaderboardOpen(true);
+  }, []);
+
+  const currentStation = session?.stations.find((station) => station.id === session.player.currentStationId);
+  const hoveredStation = session?.stations.find((station) => station.id === hoveredPlanetId);
+
   useEffect(() => {
-    if (screen !== 'game') return;
-    function onKey(e: KeyboardEvent) {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      // DevPanel toggle: Ctrl+` or Alt+D
-      if ((e.ctrlKey || e.altKey) && (e.key === '`' || e.key === 'd' || e.key === 'D')) {
-        e.preventDefault();
-        setDevOpen((v) => !v);
+    if (!session?.ui.tradeModal.open || !session.ui.tradeModal.isLoading || !session.ui.tradeModal.stationId) {
+      return;
+    }
+
+    let cancelled = false;
+    void gameGateway.openMarket(session, session.ui.tradeModal.stationId)
+      .then(() => {
+        if (!cancelled) {
+          store.dispatch(setTradeModalLoading(false));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          store.dispatch(closeTradeModal());
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
+
+  const monopolyProgress = session ? computeGalaxyMonopolyProgress(session) : [];
+  const victoryState = session
+    ? checkVictoryState(session)
+    : { won: false, winningGoods: null, monopolyCount: 0, progress: [] };
+  const regionState = session
+    ? computeRegionMonopolyState(session)
+    : { focusGoodsId: null, focusGoodsName: null, highlightedStations: [] };
+
+  const monopolyItems = monopolyProgress.map((item) => ({
+    goodsId: item.goodsId,
+    goodsName: item.goodsName,
+    shortName: item.shortName,
+    icon: '',
+    ratio: item.ratio,
+  }));
+
+  const cargoItems = useMemo<CargoSlotItem[]>(
+    () =>
+      session?.player.cargo.map((item) => ({
+        goodsId: item.goodsId,
+        goodsName: item.goodsName,
+        quantity: item.quantity,
+        avgCost: item.avgCost,
+        isContraband: item.isContraband,
+      })) ?? [],
+    [session],
+  );
+
+  const cargoSlots = toCargoSlots(cargoItems);
+
+  const warehouseItems = useMemo(() => {
+    if (!session || !currentStation) return [];
+    const entries = session.warehouses[currentStation.id] ?? [];
+    return entries
+      .map((entry) => {
+        const goods = session.goods.find((item) => item.id === entry.goodsId);
+        if (!goods) return null;
+        const wantedMultiplier =
+          session.player.wantedLevel <= 0 ? 1 : session.player.wantedLevel === 1 ? 1.35 : session.player.wantedLevel === 2 ? 1.9 : 2.6;
+        const taxRate = Math.round(12 * (1 + entry.storedTurns * 0.12) * wantedMultiplier);
+        return {
+          goodsId: entry.goodsId,
+          goodsName: goods.name,
+          quantity: entry.quantity,
+          stationName: currentStation.name,
+          storedTurns: entry.storedTurns,
+          taxRate,
+        };
+      })
+      .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+  }, [currentStation, session]);
+
+  const tradeStation = session?.ui.tradeModal.stationId
+    ? session.stations.find((station) => station.id === session.ui.tradeModal.stationId)
+    : null;
+
+  const stationGoods = useMemo<GoodsCard[]>(() => {
+    if (!session || !tradeStation) return [];
+    return tradeStation.inventory.map((inventoryItem) => {
+      const goods = session.goods.find((entry) => entry.id === inventoryItem.goodsId)!;
+      return toGoodsCard(inventoryItem, goods.name, goods.isContraband);
+    });
+  }, [session, tradeStation]);
+
+  const selectedGoods = useMemo(() => {
+    if (!tradeStation || !session?.ui.tradeModal.selectedGoodsId || !session) return null;
+    const inventoryItem = tradeStation.inventory.find(
+      (item) => item.goodsId === session.ui.tradeModal.selectedGoodsId,
+    );
+    const goods = session.goods.find((entry) => entry.id === session.ui.tradeModal.selectedGoodsId);
+    if (!inventoryItem || !goods) return null;
+    return {
+      goods,
+      inventoryItem,
+      cargoItem: session.player.cargo.find((item) => item.goodsId === goods.id) ?? null,
+    };
+  }, [session, tradeStation]);
+
+  const adjacentPrices = useMemo(() => {
+    if (!session || !tradeStation || !selectedGoods) return [];
+    const adjacentIds = session.routes.flatMap((route) => {
+      if (route.from === tradeStation.id) return [route.to];
+      if (route.to === tradeStation.id) return [route.from];
+      return [];
+    });
+    return adjacentIds
+      .map((stationId) => {
+        const station = session.stations.find((entry) => entry.id === stationId);
+        const inventory = station?.inventory.find((item) => item.goodsId === selectedGoods.goods.id);
+        if (!station || !inventory) return null;
+        return {
+          stationName: station.name,
+          price: inventory.currentPrice,
+        };
+      })
+      .filter((entry): entry is { stationName: string; price: number } => entry !== null);
+  }, [session, selectedGoods, tradeStation]);
+
+  const settlementData: SettlementData = {
+    result:
+      session?.player.status === 'WON'
+        ? 'won'
+        : session?.player.status === 'LOST'
+          ? 'lost'
+          : 'timeup',
+    playerName: session?.player.name ?? DEFAULT_SETTLEMENT.playerName,
+    finalCredits: session?.player.credits ?? DEFAULT_SETTLEMENT.finalCredits,
+    monopolyCount: victoryState.monopolyCount,
+    tradeCount: session?.stats.tradeCount ?? DEFAULT_SETTLEMENT.tradeCount,
+    eventCount: session?.stats.eventCount ?? DEFAULT_SETTLEMENT.eventCount,
+    breakdown: {
+      creditsBonus: Math.round((session?.player.credits ?? DEFAULT_SETTLEMENT.finalCredits) * 0.5),
+      monopolyBonus: victoryState.monopolyCount * 5000,
+      tradeBonus: (session?.stats.tradeCount ?? 0) * 100,
+      eventBonus: (session?.stats.eventCount ?? 0) * 200,
+      total:
+        Math.round((session?.player.credits ?? DEFAULT_SETTLEMENT.finalCredits) * 0.5) +
+        victoryState.monopolyCount * 5000 +
+        (session?.stats.tradeCount ?? 0) * 100 +
+        (session?.stats.eventCount ?? 0) * 200,
+    },
+  };
+
+  useEffect(() => {
+    if (!settlementOpen || !account || scoreRecorded) return;
+    void authGateway.recordScore(account.id, settlementData.breakdown.total).then((updated) => {
+      if (updated) {
+        setAccount(updated);
+      }
+      setScoreRecorded(true);
+    });
+  }, [account, scoreRecorded, settlementData.breakdown.total, settlementOpen]);
+
+  const handleTradeExecute = useCallback(
+    async (quantity: number, tradeType: 'buy' | 'sell') => {
+      const current = store.getState().session.current;
+      if (!current || !tradeStation || !selectedGoods) return;
+
+      store.dispatch(beginTradeAction({ stationId: tradeStation.id }));
+      store.dispatch(setTradeSubmitting(true));
+      store.dispatch(setTradeError(null));
+
+      const result = await gameGateway.executeTrade(current, {
+        stationId: tradeStation.id,
+        goodsId: selectedGoods.goods.id,
+        quantity,
+        tradeType,
+      });
+
+      if (!result.ok) {
+        store.dispatch(setTradeSubmitting(false));
+        store.dispatch(setTradeError(result.message));
         return;
       }
-      switch (e.key) {
-        case 't': case 'T': pushToastSequence(); break;
-        case 'e': case 'E': setEncounterOpen((v) => !v); break;
-        case 'm': case 'M': setTradeOpen((v) => !v); break;
-        case 's': case 'S': setSettlementOpen((v) => !v); break;
-      }
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [screen]);
 
+      store.dispatch(setSession(result.session));
+      store.dispatch(setPlanets(mapPlanets(result.session.stations)));
+      store.dispatch(setConnections(mapRoutes(result.session.routes)));
+      pushWorldToast(
+        `${selectedGoods.goods.name}${tradeType === 'buy' ? ' 买入完成' : ' 卖出完成'}`,
+        'market_shock',
+      );
+    },
+    [selectedGoods, tradeStation],
+  );
+
+  const handleDeposit = useCallback(async (goodsId: number, quantity: number) => {
+    const current = store.getState().session.current;
+    if (!current) return;
+
+    const result = await gameGateway.depositWarehouse(current, {
+      stationId: current.player.currentStationId,
+      goodsId,
+      quantity,
+    });
+
+    if (!result.ok) {
+      store.dispatch(setTradeError(result.message));
+      return;
+    }
+
+    store.dispatch(setSession(result.session));
+    pushWorldToast('货物已存入当前站点仓库', 'route_opened');
+  }, []);
+
+  const handleWithdraw = useCallback(async (goodsId: number, quantity: number) => {
+    const current = store.getState().session.current;
+    if (!current) return;
+
+    const result = await gameGateway.withdrawWarehouse(current, {
+      stationId: current.player.currentStationId,
+      goodsId,
+      quantity,
+    });
+
+    if (!result.ok) {
+      store.dispatch(setTradeError(result.message));
+      return;
+    }
+
+    store.dispatch(setSession(result.session));
+    pushWorldToast(
+      `货物已取出${result.taxPaid ? `，税费 ${result.taxPaid} CR` : ''}`,
+      'wanted_change',
+    );
+  }, []);
+
+  const handleEncounterChoice = useCallback((choiceId: number) => {
+    const current = store.getState().session.current;
+    if (!current) return;
+    store.dispatch(setEncounterResolving(true));
+    const resolved = gameGateway.resolveEncounterChoice(current, {
+      choiceId,
+      pendingAction: current.ui.pendingAction,
+    });
+    store.dispatch(setSession(resolved.session));
+  }, []);
+
+  const handleEncounterConfirm = useCallback(() => {
+    const current = store.getState().session.current;
+    if (!current) return;
+    const advanced = gameGateway.finalizeEncounterAndAdvance(current);
+    store.dispatch(setSession(advanced));
+    store.dispatch(closeEncounter());
+    store.dispatch(finishTurnResolution());
+  }, []);
+
+  useEffect(() => {
+    if (!session) return;
+    if (session.player.status === 'WON' || session.player.status === 'LOST' || session.player.status === 'TIMEUP') {
+      setSettlementOpen(true);
+    }
+  }, [session]);
+
+  return (
+    <>
+      {screen === 'login' && <LoginScreen onLogin={handleLogin} onRegister={handleRegister} />}
+
+      {screen === 'lobby' && (
+        <LobbyScreen
+          playerName={account?.nickname ?? 'Pilot'}
+          onStartGame={handleStartGame}
+          onShowLeaderboard={handleOpenLeaderboard}
+          onLogout={handleLogout}
+        />
+      )}
+
+      {screen === 'loading' && (
+        <Box
+          sx={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 4,
+            bgcolor: colors.bg.deep,
+          }}
+        >
+          <LoadingSpinner text={loadingMsg} size={64} />
+        </Box>
+      )}
+
+      {screen === 'game' && session && (
+        <>
+          <GameScene
+            topHUD={{
+              credits: session.player.credits,
+              previousCredits: session.player.credits,
+              status:
+                session.player.status === 'WON' || session.player.status === 'LOST' || session.player.status === 'TIMEUP'
+                  ? 'EXPLORING'
+                  : session.player.status,
+              startYear: session.meta.startYear,
+              currentYear: session.meta.currentYear,
+              endYear: session.meta.endYear,
+              wantedLevel: session.player.wantedLevel,
+              onEndGame: handleEndGame,
+            }}
+            rightCargo={{
+              cargoUsed: session.player.cargo.reduce((sum, item) => sum + item.quantity, 0),
+              cargoCapacity: session.player.cargoCapacity,
+              slots: cargoSlots,
+              onSlotClick: () => setWarehouseOpen(true),
+            }}
+            bottomInfo={{
+              monopolyItems,
+              currentStationName: currentStation?.name,
+              currentStationSecurity: currentStation?.security,
+              hoveredStationName: hoveredStation?.name,
+              hoveredMoveCost: hoveredMoveCost ?? undefined,
+              regionFocusGoodsName: regionState.focusGoodsName ?? undefined,
+            }}
+            isProcessing={session.ui.moveState === 'traveling' || session.ui.moveState === 'event_blocking'}
+            regionViewActive={regionViewActive}
+            onRegionViewChange={setRegionViewActive}
+          />
+
+          <TradeModal
+            open={session.ui.tradeModal.open}
+            stationName={tradeStation?.name ?? ''}
+            stationGoods={stationGoods}
+            cargoItems={cargoItems}
+            isLoading={session.ui.tradeModal.isLoading}
+            errorMessage={session.ui.tradeModal.errorMessage}
+            onClearError={() => store.dispatch(setTradeError(null))}
+            onSelectGoods={(goods) => store.dispatch(setTradeSelectedGoods(goods.goodsId))}
+            onClose={() => store.dispatch(closeTradeModal())}
+          />
+
+          {session.ui.tradeModal.open && !session.ui.tradeModal.isLoading && selectedGoods && (
+            <Box
+              sx={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 25,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                bgcolor: 'rgba(0,0,0,0.25)',
+              }}
+              onClick={() => store.dispatch(setTradeSelectedGoods(null))}
+            >
+              <MiniTradePanel
+                goodsId={selectedGoods.goods.id}
+                goodsName={selectedGoods.goods.name}
+                currentPrice={selectedGoods.inventoryItem.currentPrice}
+                previousPrice={
+                  selectedGoods.inventoryItem.priceHistory.length > 1
+                    ? selectedGoods.inventoryItem.priceHistory[selectedGoods.inventoryItem.priceHistory.length - 2]
+                    : undefined
+                }
+                stock={selectedGoods.inventoryItem.stock}
+                isContraband={selectedGoods.goods.isContraband}
+                cargoQuantity={selectedGoods.cargoItem?.quantity ?? 0}
+                maxBuy={Math.max(
+                  0,
+                  Math.min(
+                    selectedGoods.inventoryItem.stock,
+                    Math.floor(session.player.credits / selectedGoods.inventoryItem.currentPrice),
+                    session.player.cargoCapacity - session.player.cargo.reduce((sum, item) => sum + item.quantity, 0),
+                  ),
+                )}
+                maxSell={selectedGoods.cargoItem?.quantity ?? 0}
+                priceHistory={selectedGoods.inventoryItem.priceHistory}
+                adjacentPrices={adjacentPrices}
+                isSubmitting={session.ui.tradeModal.isSubmitting}
+                onExecute={handleTradeExecute}
+                onClose={() => store.dispatch(setTradeSelectedGoods(null))}
+              />
+            </Box>
+          )}
+
+          <EncounterModal
+            open={session.ui.encounter.open}
+            title={session.ui.encounter.title}
+            description={session.ui.encounter.description}
+            choices={session.ui.encounter.choices}
+            result={session.ui.encounter.result}
+            onChoose={handleEncounterChoice}
+            onConfirmResult={handleEncounterConfirm}
+          />
+
+          {settlementOpen && (
+            <SettlementScreen
+              data={settlementData}
+              onReplay={() => {
+                setSettlementOpen(false);
+                void handleStartGame();
+              }}
+              onHome={() => {
+                setSettlementOpen(false);
+                setScreen('lobby');
+              }}
+            />
+          )}
+
+          <WarehousePanel
+            open={warehouseOpen}
+            cargoItems={cargoItems}
+            warehouseItems={warehouseItems}
+            cargoCapacity={session.player.cargoCapacity}
+            cargoUsed={session.player.cargo.reduce((sum, item) => sum + item.quantity, 0)}
+            onDeposit={handleDeposit}
+            onWithdraw={handleWithdraw}
+            onClose={() => setWarehouseOpen(false)}
+          />
+        </>
+      )}
+
+      <LeaderboardModal open={leaderboardOpen} entries={leaderboardEntries} onClose={() => setLeaderboardOpen(false)} />
+
+      {screen === 'game' && <DevPanel open={devOpen} onClose={() => setDevOpen(false)} />}
+    </>
+  );
+}
+
+export default function App() {
   return (
     <Provider store={store}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-
-        {/* ---- Login ---- */}
-        {screen === 'login' && <LoginScreen onEnter={handleEnter} />}
-
-        {/* ---- Lobby ---- */}
-        {screen === 'lobby' && (
-          <LobbyScreen playerName={playerName} onStartGame={handleStartGame} onLogout={handleLogout} />
-        )}
-
-        {/* ---- Loading transition (NX-03) ---- */}
-        {screen === 'loading' && (
-          <Box
-            sx={{
-              position: 'fixed', inset: 0, zIndex: 100,
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
-              bgcolor: colors.bg.deep,
-            }}
-          >
-            <LoadingSpinner text={loadingMsg} size={64} />
-          </Box>
-        )}
-
-        {/* ---- Game ---- */}
-        {screen === 'game' && (
-          <>
-            <GameScene
-              canvasRef={canvasRef}
-              topHUD={{ ...MOCK_TOP_HUD, onEndGame: handleEndGame }}
-              rightCargo={{ cargoUsed: 20, cargoCapacity: 80, slots: MOCK_CARGO_SLOTS, onSlotClick: () => {} }}
-              bottomInfo={{
-                monopolyItems: MOCK_MONOPOLY,
-                currentStationName: '阿尔法空间站',
-                currentStationSecurity: 'B',
-              }}
-            />
-
-            {/* === MODALS: rendered at App root to avoid GameScene overflow containment === */}
-
-            {/* TradeModal */}
-            <TradeModal
-              open={tradeOpen}
-              stationName="阿尔法空间站"
-              stationGoods={MOCK_STATION_GOODS}
-              cargoItems={MOCK_CARGO}
-              isLoading={false}
-              onSelectGoods={(g) => setMiniTrade(g)}
-              onClose={() => { setTradeOpen(false); setMiniTrade(null); }}
-            />
-
-            {/* MiniTradePanel */}
-            {miniTrade && (
-              <Box sx={{ position: 'fixed', inset: 0, zIndex: 25, bgcolor: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setMiniTrade(null)}>
-                <MiniTradePanel
-                  goodsId={miniTrade.goodsId}
-                  goodsName={miniTrade.goodsName}
-                  currentPrice={miniTrade.currentPrice}
-                  previousPrice={miniTrade.previousPrice}
-                  stock={miniTrade.stock}
-                  isContraband={miniTrade.isContraband}
-                  cargoQuantity={MOCK_CARGO.find((c) => c.goodsId === miniTrade.goodsId)?.quantity ?? 0}
-                  maxBuy={Math.floor(12450 / miniTrade.currentPrice)}
-                  maxSell={MOCK_CARGO.find((c) => c.goodsId === miniTrade.goodsId)?.quantity ?? 0}
-                  adjacentPrices={[
-                    { stationName: '贝塔港', price: miniTrade.currentPrice + 45 },
-                    { stationName: '伽马站', price: miniTrade.currentPrice - 30 },
-                    { stationName: '德尔塔', price: miniTrade.currentPrice + 12 },
-                  ]}
-                  onExecute={() => { setMiniTrade(null); pushWorldToast(`${miniTrade.goodsName} 交易完成`, 'market_shock'); }}
-                  onClose={() => setMiniTrade(null)}
-                />
-              </Box>
-            )}
-
-            {/* EncounterModal */}
-            <EncounterModal
-              open={encounterOpen}
-              title={MOCK_ENCOUNTER.title}
-              description={MOCK_ENCOUNTER.description}
-              choices={MOCK_ENCOUNTER.choices}
-              result={encounterResult}
-              onChoose={(id) => {
-                const ok = id === 2;
-                setEncounterResult({ success: ok, message: ok ? '你获得了 500 CR 奖金！' : '违禁品被没收，可疑度 +50' });
-              }}
-              onConfirmResult={() => { setEncounterResult(null); setEncounterOpen(false); }}
-            />
-
-            {/* SettlementScreen */}
-            {settlementOpen && (
-              <SettlementScreen
-                data={MOCK_SETTLEMENT}
-                onReplay={() => { setSettlementOpen(false); setScreen('loading'); handleStartGame(); }}
-                onHome={() => { setSettlementOpen(false); setScreen('lobby'); }}
-              />
-            )}
-
-            {/* ---- Debug toolbar (NX-02): hide when any modal is active ---- */}
-            {!tradeOpen && !encounterOpen && !settlementOpen && !miniTrade && (
-            <Box
-                sx={{
-                  position: 'fixed',
-                  bottom: 'calc(var(--hud-bottom-height) + 8px)',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  zIndex: 35,
-                  display: 'flex',
-                  gap: 1,
-                  px: 1.5,
-                  py: 0.75,
-                  borderRadius: '2px',
-                  bgcolor: 'rgba(10,15,30,0.92)',
-                  border: `1px solid ${colors.border}`,
-                  backdropFilter: 'blur(4px)',
-                }}
-              >
-                {([
-                  ['M', '交易', () => setTradeOpen((v) => !v)],
-                  ['E', '遭遇', () => setEncounterOpen((v) => !v)],
-                  ['S', '结算', () => setSettlementOpen(true)],
-                  ['T', '事件', pushToastSequence],
-                ] as const).map(([key, label, fn]) => (
-                  <Button
-                    key={key}
-                    size="small"
-                    variant="outlined"
-                    onClick={fn as () => void}
-                    sx={{
-                      fontSize: '0.6rem',
-                      fontFamily: 'var(--font-mono)',
-                      py: 0.25,
-                      px: 1,
-                      minWidth: 0,
-                      borderColor: colors.border,
-                      color: colors.muted,
-                      '&:hover': { color: colors.primary, borderColor: colors.primary },
-                    }}
-                  >
-                    [{key}] {label}
-                  </Button>
-                ))}
-              </Box>
-            )}
-          </>
-        )}
-
-        {/* ---- DevPanel (NX-10) ---- */}
-        {screen === 'game' && <DevPanel open={devOpen} onClose={() => setDevOpen(false)} />}
+        <AppContent />
       </ThemeProvider>
     </Provider>
   );
-}
-
-/* ---- WorldEventToast sequence demo (NX-04) ---- */
-function pushToastSequence() {
-  const events: Array<[string, 'route_blocked' | 'market_shock' | 'route_opened' | 'wanted_change' | 'monopoly_progress']> = [
-    ['海盗封锁了阿尔法-贝塔航线', 'route_blocked'],
-    ['全星系晶体价格大幅波动', 'market_shock'],
-    ['新的暗物质贸易航线已解锁', 'route_opened'],
-    ['你的可疑度上升至 Lv.2', 'wanted_change'],
-    ['暗物质核心持有率达到 91%，接近垄断！', 'monopoly_progress'],
-  ];
-  events.forEach(([msg, type], i) => {
-    setTimeout(() => pushWorldToast(msg, type), i * 600);
-  });
 }

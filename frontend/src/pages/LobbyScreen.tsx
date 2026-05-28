@@ -9,7 +9,7 @@ import colors from '../theme/colors';
 interface Props {
   playerName: string;
   onStartGame: () => void;
-  onShowLeaderboard?: () => void;
+  onShowLeaderboard: () => void;
   onLogout: () => void;
 }
 

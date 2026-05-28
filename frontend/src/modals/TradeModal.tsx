@@ -51,6 +51,8 @@ export interface TradeModalProps {
   stationGoods: GoodsCard[];
   cargoItems: CargoSlotItem[];
   isLoading: boolean;
+  errorMessage?: string | null;
+  onClearError?: () => void;
   onSelectGoods: (goods: GoodsCard) => void;
   onClose: () => void;
 }
@@ -82,16 +84,16 @@ export default function TradeModal({
   stationGoods,
   cargoItems,
   isLoading,
+  errorMessage,
+  onClearError,
   onSelectGoods,
   onClose,
 }: TradeModalProps) {
   const [closing, setClosing] = useState(false);
-  const [selectedGoodsId, setSelectedGoodsId] = useState<number | null>(null);
 
   function handleClose() {
     if (closing) return;
     setClosing(true);
-    setSelectedGoodsId(null);
     setTimeout(() => {
       setClosing(false);
       onClose();
@@ -100,7 +102,6 @@ export default function TradeModal({
 
   function handleSelectGoods(goods: GoodsCard) {
     if (goods.isLocked) return;
-    setSelectedGoodsId(goods.goodsId);
     onSelectGoods(goods);
   }
 
@@ -177,6 +178,28 @@ export default function TradeModal({
           </IconButton>
         </Box>
 
+        {!!errorMessage && (
+          <Box
+            sx={{
+              px: 3,
+              py: 1.25,
+              borderBottom: `1px solid ${colors.danger}33`,
+              bgcolor: 'rgba(255,42,109,0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 2,
+            }}
+          >
+            <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: colors.dangerHigh }}>
+              {errorMessage}
+            </Typography>
+            <IconButton size="small" onClick={onClearError} sx={{ color: colors.dangerHigh, p: 0.25 }}>
+              <CloseIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Box>
+        )}
+
         {/* ---- body ---- */}
         {isLoading ? (
           <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
@@ -227,7 +250,7 @@ export default function TradeModal({
                   }}
                 >
                   {stationGoods.map((goods) => {
-                    const isSelected = selectedGoodsId === goods.goodsId;
+                    const isSelected = false;
                     const cargoItem = cargoMap.get(goods.goodsId);
                     const priceColor = getPriceColor(goods);
                     const stockColor = getStockColor(goods.stock, goods.maxStock || 100);
@@ -250,7 +273,7 @@ export default function TradeModal({
                             ? 'rgba(0,212,255,0.08)'
                             : 'rgba(13,17,28,0.6)',
                           cursor: goods.isLocked ? 'not-allowed' : 'pointer',
-                          opacity: selectedGoodsId && !isSelected ? 0.5 : goods.isLocked ? 0.4 : 1,
+                          opacity: goods.isLocked ? 0.4 : 1,
                           filter: goods.isLocked ? 'grayscale(0.7)' : 'none',
                           transition: 'all var(--transition-fast)',
                           position: 'relative',

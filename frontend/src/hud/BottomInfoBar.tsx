@@ -2,13 +2,12 @@ import { Box, Typography, LinearProgress, Tooltip, IconButton } from '@mui/mater
 import colors from '../theme/colors';
 import { GOODS_SHORT_NAMES, ASSET_PATHS, goodsSrc } from '../theme/assets';
 
-/* ---- types ---- */
 export interface MonopolyItem {
   goodsId: number;
   goodsName: string;
   shortName: string;
   icon: string;
-  ratio: number; // 0–1
+  ratio: number;
 }
 
 export interface BottomInfoBarProps {
@@ -17,16 +16,14 @@ export interface BottomInfoBarProps {
   currentStationSecurity?: string;
   hoveredStationName?: string;
   hoveredMoveCost?: number;
+  regionFocusGoodsName?: string;
   onToggleRegionView?: () => void;
   regionViewActive?: boolean;
 }
 
 function ResourceMiniCard({ item }: { item: MonopolyItem }) {
   const pct = item.ratio * 100;
-  const barColor =
-    pct >= 70 ? colors.primary :
-    pct >= 30 ? colors.warning :
-    colors.dangerHigh;
+  const barColor = pct >= 70 ? colors.primary : pct >= 30 ? colors.warning : colors.dangerHigh;
 
   return (
     <Tooltip title={`${item.goodsName}: ${pct.toFixed(1)}%`} arrow placement="top">
@@ -43,21 +40,10 @@ function ResourceMiniCard({ item }: { item: MonopolyItem }) {
           border: `1px solid ${colors.border}`,
           bgcolor: 'rgba(0,212,255,0.02)',
           transition: 'all var(--transition-fast)',
-          '&:hover': {
-            borderColor: colors.primary,
-            bgcolor: 'rgba(0,212,255,0.05)',
-          },
         }}
       >
         <Box component="img" src={goodsSrc(item.goodsId)} alt={item.goodsName} sx={{ width: 22, height: 22, opacity: 0.9 }} />
-        <Typography
-          sx={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: '0.55rem',
-            color: colors.textSub,
-            lineHeight: 1,
-          }}
-        >
+        <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.55rem', color: colors.textSub, lineHeight: 1 }}>
           {GOODS_SHORT_NAMES[item.goodsId] ?? item.shortName}
         </Typography>
         <LinearProgress
@@ -73,14 +59,7 @@ function ResourceMiniCard({ item }: { item: MonopolyItem }) {
             },
           }}
         />
-        <Typography
-          sx={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: '0.55rem',
-            fontWeight: 600,
-            color: barColor,
-          }}
-        >
+        <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.55rem', fontWeight: 600, color: barColor }}>
           {pct.toFixed(0)}%
         </Typography>
       </Box>
@@ -94,6 +73,7 @@ export default function BottomInfoBar({
   currentStationSecurity,
   hoveredStationName,
   hoveredMoveCost,
+  regionFocusGoodsName,
   onToggleRegionView,
   regionViewActive,
 }: BottomInfoBarProps) {
@@ -115,7 +95,6 @@ export default function BottomInfoBar({
         backdropFilter: 'blur(12px)',
       }}
     >
-      {/* ---- resource mini cards ---- */}
       <Box sx={{ display: 'flex', gap: 1, flex: 2, alignItems: 'center', overflow: 'auto' }}>
         {monopolyItems.length > 0 ? (
           monopolyItems.map((item) => <ResourceMiniCard key={item.goodsId} item={item} />)
@@ -126,7 +105,6 @@ export default function BottomInfoBar({
         )}
       </Box>
 
-      {/* ---- station info ---- */}
       <Box sx={{ flex: 1.5, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
         {currentStationName ? (
           <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: colors.textMain, fontWeight: 500 }}>
@@ -143,27 +121,24 @@ export default function BottomInfoBar({
           </Typography>
         )}
 
-        {/* hovered station preview */}
         {hoveredStationName && (
-          <Typography
-            sx={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: '0.7rem',
-              color: colors.primary,
-              animation: 'fadeIn 0.2s ease',
-            }}
-          >
+          <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: colors.primary }}>
             {'\u{1F3AF}'} 悬停: {hoveredStationName}
             {hoveredMoveCost !== undefined && (
               <Typography component="span" sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: colors.warning, ml: 0.75 }}>
-                消耗: {hoveredMoveCost} 单位
+                消耗 {hoveredMoveCost} 年
               </Typography>
             )}
           </Typography>
         )}
+
+        {regionViewActive && regionFocusGoodsName && (
+          <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: colors.accent }}>
+            区域视图: {regionFocusGoodsName}
+          </Typography>
+        )}
       </Box>
 
-      {/* ---- region view toggle ---- */}
       <IconButton
         onClick={onToggleRegionView}
         size="small"
