@@ -26,7 +26,6 @@ import LobbyScreen from './pages/LobbyScreen';
 import GameScene from './pages/GameScene';
 import LoadingSpinner from './fx/LoadingSpinner';
 import SettlementScreen from './modals/SettlementScreen';
-import type { SettlementData } from './modals/SettlementScreen';
 import DevPanel from './modals/DevPanel';
 import TradeModal, { MiniTradePanel } from './modals/TradeModal';
 import type { GoodsCard, CargoSlotItem } from './modals/TradeModal';
@@ -35,6 +34,7 @@ import EncounterModal from './modals/EncounterModal';
 import LeaderboardModal from './modals/LeaderboardModal';
 import { authGateway, gameGateway } from './gateways';
 import type { AccountRecord, LeaderboardEntry, LoginPayload, RegisterPayload } from './api/authApi';
+import { DEFAULT_SETTLEMENT, type SettlementData } from './game/settlement';
 import type { RouteData, StationData, StationInventoryItem } from './game/types';
 import { checkVictoryState, computeGalaxyMonopolyProgress, computeRegionMonopolyState } from './game/monopolyService';
 import colors from './theme/colors';
@@ -48,22 +48,6 @@ const LOADING_MESSAGES = [
   '正在同步星际航线...',
   '正在校准跃迁引擎...',
 ];
-
-const DEFAULT_SETTLEMENT: SettlementData = {
-  result: 'timeup',
-  playerName: 'Pilot',
-  finalCredits: 10000,
-  monopolyCount: 0,
-  tradeCount: 0,
-  eventCount: 0,
-  breakdown: {
-    creditsBonus: 5000,
-    monopolyBonus: 0,
-    tradeBonus: 0,
-    eventBonus: 0,
-    total: 5000,
-  },
-};
 
 function mapRoutes(routes: RouteData[]) {
   return routes.map((route) => ({
@@ -122,31 +106,43 @@ function AppContent() {
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardEntry[]>([]);
   const [scoreRecorded, setScoreRecorded] = useState(false);
+  const [settlementData, setSettlementData] = useState<SettlementData>(DEFAULT_SETTLEMENT);
+  const [settlementReady, setSettlementReady] = useState(false);
 
   useEffect(() => {
-    const currentAccount = authGateway.getCurrentAccount();
-    if (currentAccount) {
-      setAccount(currentAccount);
-      setScreen('lobby');
-    }
+    let cancelled = false;
 
-    const stored = gameGateway.restoreSession();
-    if (!stored) return;
+    void (async () => {
+      const currentAccount = await authGateway.restoreCurrentAccount();
+      if (cancelled) return;
 
-    store.dispatch(setSession(stored));
-    store.dispatch(setPlanets(mapPlanets(stored.stations)));
-    store.dispatch(setConnections(mapRoutes(stored.routes)));
-    if (currentAccount) {
-      setScreen('game');
-    }
-    if (stored.player.status === 'WON' || stored.player.status === 'LOST' || stored.player.status === 'TIMEUP') {
-      setSettlementOpen(true);
-    }
+      if (currentAccount) {
+        setAccount(currentAccount);
+        setScreen('lobby');
+      }
+
+      const stored = await gameGateway.restoreSession();
+      if (cancelled || !stored) return;
+
+      store.dispatch(setSession(stored));
+      store.dispatch(setPlanets(mapPlanets(stored.stations)));
+      store.dispatch(setConnections(mapRoutes(stored.routes)));
+      if (currentAccount) {
+        setScreen('game');
+      }
+      if (stored.player.status === 'WON' || stored.player.status === 'LOST' || stored.player.status === 'TIMEUP') {
+        setSettlementOpen(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
     if (!session) return;
-    gameGateway.persistSession(session);
+    void gameGateway.persistSession(session);
   }, [session]);
 
   useEffect(() => {
@@ -215,10 +211,14 @@ function AppContent() {
   }, []);
 
   const handleLogout = useCallback(() => {
+    void gameGateway.clearSession();
     void authGateway.logout();
     setAccount(null);
     setScreen('login');
     setLeaderboardOpen(false);
+    setSettlementOpen(false);
+    setSettlementReady(false);
+    setSettlementData(DEFAULT_SETTLEMENT);
   }, []);
 
   const handleOpenLeaderboard = useCallback(async () => {
@@ -351,40 +351,23 @@ function AppContent() {
       .filter((entry): entry is { stationName: string; price: number } => entry !== null);
   }, [session, selectedGoods, tradeStation]);
 
-  const settlementData: SettlementData = {
-    result:
-      session?.player.status === 'WON'
-        ? 'won'
-        : session?.player.status === 'LOST'
-          ? 'lost'
-          : 'timeup',
-    playerName: session?.player.name ?? DEFAULT_SETTLEMENT.playerName,
-    finalCredits: session?.player.credits ?? DEFAULT_SETTLEMENT.finalCredits,
-    monopolyCount: victoryState.monopolyCount,
-    tradeCount: session?.stats.tradeCount ?? DEFAULT_SETTLEMENT.tradeCount,
-    eventCount: session?.stats.eventCount ?? DEFAULT_SETTLEMENT.eventCount,
-    breakdown: {
-      creditsBonus: Math.round((session?.player.credits ?? DEFAULT_SETTLEMENT.finalCredits) * 0.5),
-      monopolyBonus: victoryState.monopolyCount * 5000,
-      tradeBonus: (session?.stats.tradeCount ?? 0) * 100,
-      eventBonus: (session?.stats.eventCount ?? 0) * 200,
-      total:
-        Math.round((session?.player.credits ?? DEFAULT_SETTLEMENT.finalCredits) * 0.5) +
-        victoryState.monopolyCount * 5000 +
-        (session?.stats.tradeCount ?? 0) * 100 +
-        (session?.stats.eventCount ?? 0) * 200,
-    },
-  };
-
   useEffect(() => {
-    if (!settlementOpen || !account || scoreRecorded) return;
-    void authGateway.recordScore(account.id, settlementData.breakdown.total).then((updated) => {
-      if (updated) {
-        setAccount(updated);
+    if (!settlementOpen || !session || scoreRecorded) return;
+    setSettlementReady(false);
+    let cancelled = false;
+    void gameGateway.completeSettlement(session, account?.id).then(({ settlement, account: updatedAccount }) => {
+      if (cancelled) return;
+      setSettlementData(settlement);
+      if (updatedAccount) {
+        setAccount(updatedAccount);
       }
       setScoreRecorded(true);
+      setSettlementReady(true);
     });
-  }, [account, scoreRecorded, settlementData.breakdown.total, settlementOpen]);
+    return () => {
+      cancelled = true;
+    };
+  }, [account?.id, scoreRecorded, session, settlementOpen]);
 
   const handleTradeExecute = useCallback(
     async (quantity: number, tradeType: 'buy' | 'sell') => {
@@ -464,20 +447,22 @@ function AppContent() {
     const current = store.getState().session.current;
     if (!current) return;
     store.dispatch(setEncounterResolving(true));
-    const resolved = gameGateway.resolveEncounterChoice(current, {
+    void gameGateway.resolveEncounterChoice(current, {
       choiceId,
       pendingAction: current.ui.pendingAction,
+    }).then((resolved) => {
+      store.dispatch(setSession(resolved.session));
     });
-    store.dispatch(setSession(resolved.session));
   }, []);
 
   const handleEncounterConfirm = useCallback(() => {
     const current = store.getState().session.current;
     if (!current) return;
-    const advanced = gameGateway.finalizeEncounterAndAdvance(current);
-    store.dispatch(setSession(advanced));
-    store.dispatch(closeEncounter());
-    store.dispatch(finishTurnResolution());
+    void gameGateway.finalizeEncounterAndAdvance(current).then((advanced) => {
+      store.dispatch(setSession(advanced));
+      store.dispatch(closeEncounter());
+      store.dispatch(finishTurnResolution());
+    });
   }, []);
 
   useEffect(() => {
@@ -623,10 +608,12 @@ function AppContent() {
               data={settlementData}
               onReplay={() => {
                 setSettlementOpen(false);
+                void gameGateway.clearSession();
                 void handleStartGame();
               }}
               onHome={() => {
                 setSettlementOpen(false);
+                void gameGateway.clearSession();
                 setScreen('lobby');
               }}
             />

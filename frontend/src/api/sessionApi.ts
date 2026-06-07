@@ -127,6 +127,10 @@ export function persistSession(session: GameSessionData) {
   localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(normalized));
 }
 
+export function clearStoredSession() {
+  localStorage.removeItem(SESSION_STORAGE_KEY);
+}
+
 export function restoreSession(): GameSessionData | null {
   const stored = loadStoredSession();
   if (!stored) return null;

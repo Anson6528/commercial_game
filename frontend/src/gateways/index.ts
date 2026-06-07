@@ -1,19 +1,20 @@
+import { backendAuthGateway } from './backendAuthGateway';
+import { backendGameGateway } from './backendGameGateway';
+import { DATA_MODE } from './indexRuntime';
 import { mockAuthGateway } from './mockAuthGateway';
 import { mockGameGateway } from './mockGameGateway';
 import type { AuthGateway, GameGateway } from './types';
 
-const DATA_MODE = (import.meta.env.VITE_DATA_MODE ?? 'mock') as 'mock' | 'backend';
-
 function getAuthGateway(): AuthGateway {
   if (DATA_MODE === 'backend') {
-    return mockAuthGateway;
+    return backendAuthGateway;
   }
   return mockAuthGateway;
 }
 
 function getGameGateway(): GameGateway {
   if (DATA_MODE === 'backend') {
-    return mockGameGateway;
+    return backendGameGateway;
   }
   return mockGameGateway;
 }

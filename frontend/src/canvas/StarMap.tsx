@@ -191,22 +191,24 @@ export default function StarMap({ regionViewActive = false }: StarMapProps) {
         if (!session) return;
         dispatch(completeTravel({ stationId: toStation.id }));
         dispatch(setActiveTravelPreview(null));
-        const moveResult = gameGateway.startMove(session, {
+        void gameGateway.startMove(session, {
           stationId: fromStation.id,
           targetStationId: toStation.id,
           yearsCost: route.travelCost,
-        });
-        const movedSession = moveResult.session;
-        const encounter = moveResult.encounter;
-        if (encounter) {
-          dispatch(setSession(movedSession));
-          dispatch(startEncounter({ event: encounter }));
-          return;
-        }
+        }).then((moveResult) => {
+          const movedSession = moveResult.session;
+          const encounter = moveResult.encounter;
+          if (encounter) {
+            dispatch(setSession(movedSession));
+            dispatch(startEncounter({ event: encounter }));
+            return;
+          }
 
-        const advanced = gameGateway.advanceWorld(movedSession, route.travelCost, 'move');
-        dispatch(setSession(advanced));
-        dispatch(finishTurnResolution());
+          void gameGateway.advanceWorld(movedSession, route.travelCost, 'move').then((advanced) => {
+            dispatch(setSession(advanced));
+            dispatch(finishTurnResolution());
+          });
+        });
       }, durationMs);
     },
     [dispatch, session],

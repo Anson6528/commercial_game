@@ -1,10 +1,11 @@
 import { resolveEncounter, rollEncounter } from '../api/sessionEncounterApi';
-import { fetchSessionTemplate, normalizeSession, persistSession, restoreSession } from '../api/sessionApi';
+import { clearStoredSession, fetchSessionTemplate, normalizeSession, persistSession, restoreSession } from '../api/sessionApi';
 import { executeTrade, openStationMarket } from '../api/sessionTradeApi';
 import { depositToWarehouse, withdrawFromWarehouse } from '../api/sessionWarehouseApi';
 import { advanceWorldState } from '../api/sessionWorldApi';
+import { recordScore } from '../api/authApi';
 import { createGameSession, generateSessionSeed } from '../game/sessionGenerator';
-import { evaluateGameState } from '../game/monopolyService';
+import { computeSettlementData } from '../game/settlement';
 import type { GameGateway, StartMoveResult } from './types';
 import type { GameSessionData } from '../game/types';
 
@@ -20,12 +21,16 @@ export const mockGameGateway: GameGateway = {
     return session;
   },
 
-  restoreSession() {
+  async restoreSession() {
     return restoreSession();
   },
 
-  persistSession(session) {
+  async persistSession(session) {
     persistSession(session);
+  },
+
+  async clearSession() {
+    clearStoredSession();
   },
 
   async openMarket(session, stationId) {
@@ -44,7 +49,7 @@ export const mockGameGateway: GameGateway = {
     return withdrawFromWarehouse(session, payload);
   },
 
-  startMove(session, params): StartMoveResult {
+  async startMove(session, params): Promise<StartMoveResult> {
     const movedSession = cloneSession(session);
     movedSession.player.currentStationId = params.targetStationId;
     movedSession.player.status = 'TRAVELING';
@@ -80,13 +85,13 @@ export const mockGameGateway: GameGateway = {
     };
   },
 
-  resolveEncounterChoice(session, payload) {
+  async resolveEncounterChoice(session, payload) {
     const nextSession = cloneSession(session);
     nextSession.ui.pendingAction = payload.pendingAction;
     return resolveEncounter(nextSession, payload.choiceId);
   },
 
-  finalizeEncounterAndAdvance(session) {
+  async finalizeEncounterAndAdvance(session) {
     const yearsElapsed =
       session.ui.pendingAction.type === 'move' && !session.ui.pendingAction.baseYearsSettled
         ? session.ui.pendingAction.yearsCost ?? 0
@@ -100,11 +105,17 @@ export const mockGameGateway: GameGateway = {
     return advanced;
   },
 
-  advanceWorld(session, yearsElapsed, source) {
+  async advanceWorld(session, yearsElapsed, source) {
     return advanceWorldState(session, { yearsElapsed, source });
   },
 
-  evaluateSettlement(session) {
-    return evaluateGameState(session);
+  async evaluateSettlement(session) {
+    return computeSettlementData(session);
+  },
+
+  async completeSettlement(session, accountId) {
+    const settlement = computeSettlementData(session);
+    const account = accountId ? await recordScore(accountId, settlement.breakdown.total) : null;
+    return { settlement, account };
   },
 };

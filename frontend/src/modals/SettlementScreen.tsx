@@ -1,27 +1,9 @@
-import { useEffect, useState, useRef } from 'react';
-import { Box, Typography, Button } from '@mui/material';
+import { useEffect, useRef, useState } from 'react';
+import { Box, Button, Typography } from '@mui/material';
 import { Replay as ReplayIcon, Home as HomeIcon } from '@mui/icons-material';
 import colors from '../theme/colors';
 import { SETTLEMENT_EMOJI } from '../theme/assets';
-
-/* ---- types ---- */
-export interface ScoreBreakdown {
-  creditsBonus: number;
-  monopolyBonus: number;
-  tradeBonus: number;
-  eventBonus: number;
-  total: number;
-}
-
-export interface SettlementData {
-  result: 'won' | 'lost' | 'timeup';
-  playerName: string;
-  finalCredits: number;
-  monopolyCount: number;
-  tradeCount: number;
-  eventCount: number;
-  breakdown: ScoreBreakdown;
-}
+import type { SettlementData } from '../game/settlement';
 
 interface Props {
   data: SettlementData;
@@ -29,7 +11,6 @@ interface Props {
   onHome?: () => void;
 }
 
-/* ---- counting number hook ---- */
 function useCountUp(target: number, duration: number, start: boolean) {
   const [value, setValue] = useState(0);
   const raf = useRef<number>(0);
@@ -40,8 +21,10 @@ function useCountUp(target: number, duration: number, start: boolean) {
       const resetTimer = setTimeout(() => setValue(0), 0);
       return () => clearTimeout(resetTimer);
     }
+
     const startTime = performance.now();
     prevRounded.current = -1;
+
     function tick(now: number) {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
@@ -51,8 +34,11 @@ function useCountUp(target: number, duration: number, start: boolean) {
         prevRounded.current = next;
         setValue(next);
       }
-      if (progress < 1) raf.current = requestAnimationFrame(tick);
+      if (progress < 1) {
+        raf.current = requestAnimationFrame(tick);
+      }
     }
+
     raf.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf.current);
   }, [target, duration, start]);
@@ -60,15 +46,23 @@ function useCountUp(target: number, duration: number, start: boolean) {
   return value;
 }
 
-function ScoreRow({ label, value, delay, color = colors.textMain }: {
-  label: string; value: number; delay: number; color?: string;
+function ScoreRow({
+  label,
+  value,
+  delay,
+  color = colors.textMain,
+}: {
+  label: string;
+  value: number;
+  delay: number;
+  color?: string;
 }) {
   const [visible, setVisible] = useState(false);
   const count = useCountUp(value, 1200, visible);
 
   useEffect(() => {
-    const t = setTimeout(() => setVisible(true), delay);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setVisible(true), delay);
+    return () => clearTimeout(timer);
   }, [delay]);
 
   return (
@@ -94,18 +88,23 @@ function ScoreRow({ label, value, delay, color = colors.textMain }: {
   );
 }
 
-/* ---- main component ---- */
+function CountUpFinal({ value, start }: { value: number; start: boolean }) {
+  const count = useCountUp(value, 1800, start);
+  return <>{count.toLocaleString()} CR</>;
+}
+
 export default function SettlementScreen({ data, onReplay, onHome }: Props) {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => setShow(true), 200);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setShow(true), 200);
+    return () => clearTimeout(timer);
   }, []);
 
   const isWin = data.result === 'won';
   const resultColor = isWin ? colors.successLow : data.result === 'lost' ? colors.dangerHigh : colors.warning;
-  const resultTitle = isWin ? '贸易垄断达成' : data.result === 'lost' ? '破产清算' : '时间耗尽';
+  const resultTitle = isWin ? 'Trade Monopoly Achieved' : data.result === 'lost' ? 'Bankruptcy Settlement' : 'Time Limit Reached';
+  const finalizedLabel = data.finalizedAt ? new Date(data.finalizedAt).toLocaleString() : null;
 
   return (
     <Box
@@ -123,7 +122,6 @@ export default function SettlementScreen({ data, onReplay, onHome }: Props) {
         backdropFilter: 'blur(12px)',
       }}
     >
-      {/* ambient glow */}
       <Box
         sx={{
           position: 'absolute',
@@ -137,7 +135,6 @@ export default function SettlementScreen({ data, onReplay, onHome }: Props) {
       />
 
       <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2.5 }}>
-        {/* ---- result icon ---- */}
         <Box sx={{ textAlign: 'center', animation: 'fadeIn 0.6s ease both' }}>
           <Box sx={{ fontSize: 48, mb: 1, lineHeight: 1 }}>
             {SETTLEMENT_EMOJI[data.result] ?? SETTLEMENT_EMOJI.timeup}
@@ -156,9 +153,22 @@ export default function SettlementScreen({ data, onReplay, onHome }: Props) {
           <Typography sx={{ fontSize: '0.78rem', color: colors.textSub, mt: 0.5, fontFamily: 'var(--font-mono)' }}>
             {data.playerName}
           </Typography>
+          {(data.recordId || finalizedLabel) && (
+            <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
+              {data.recordId && (
+                <Typography sx={{ fontSize: '0.62rem', color: colors.muted, fontFamily: 'var(--font-mono)' }}>
+                  {`Record ${data.recordId}`}
+                </Typography>
+              )}
+              {finalizedLabel && (
+                <Typography sx={{ fontSize: '0.62rem', color: colors.muted, fontFamily: 'var(--font-mono)' }}>
+                  {`Finalized ${finalizedLabel}`}
+                </Typography>
+              )}
+            </Box>
+          )}
         </Box>
 
-        {/* ---- score breakdown ---- */}
         <Box
           className="glass-panel"
           sx={{
@@ -179,19 +189,23 @@ export default function SettlementScreen({ data, onReplay, onHome }: Props) {
                 color: colors.textMain,
               }}
             >
-              结算明细
+              Settlement Breakdown
             </Typography>
             <Typography sx={{ fontSize: '0.65rem', color: colors.muted, mt: 0.25, fontFamily: 'var(--font-mono)' }}>
-              资金 × 0.5 + 垄断 × 5,000 + 交易 × 100 + 事件 × 200
+              Credits x 0.5 + Monopoly x 5,000 + Trades x 100 + Events x 200
             </Typography>
           </Box>
 
-          <ScoreRow label="资金加成" value={data.breakdown.creditsBonus} delay={500} />
-          <ScoreRow label="垄断加成" value={data.breakdown.monopolyBonus} delay={800} color={data.monopolyCount > 0 ? colors.successLow : colors.textMain} />
-          <ScoreRow label="交易活跃" value={data.breakdown.tradeBonus} delay={1100} />
-          <ScoreRow label="事件参与" value={data.breakdown.eventBonus} delay={1400} />
+          <ScoreRow label="Credits Bonus" value={data.breakdown.creditsBonus} delay={500} />
+          <ScoreRow
+            label="Monopoly Bonus"
+            value={data.breakdown.monopolyBonus}
+            delay={800}
+            color={data.monopolyCount > 0 ? colors.successLow : colors.textMain}
+          />
+          <ScoreRow label="Trade Activity" value={data.breakdown.tradeBonus} delay={1100} />
+          <ScoreRow label="Event Participation" value={data.breakdown.eventBonus} delay={1400} />
 
-          {/* total */}
           <Box
             sx={{
               display: 'flex',
@@ -204,7 +218,7 @@ export default function SettlementScreen({ data, onReplay, onHome }: Props) {
               opacity: show ? 1 : 0,
             }}
           >
-            <Typography sx={{ fontWeight: 600, color: colors.textMain, fontSize: '0.9rem' }}>总计</Typography>
+            <Typography sx={{ fontWeight: 600, color: colors.textMain, fontSize: '0.9rem' }}>Total</Typography>
             <Typography
               sx={{
                 fontFamily: 'var(--font-mono)',
@@ -214,29 +228,27 @@ export default function SettlementScreen({ data, onReplay, onHome }: Props) {
                 textShadow: `0 0 12px ${resultColor}33`,
               }}
             >
-              {show ? (
-                <CountUpFinal value={data.breakdown.total} start={show} />
-              ) : '0 CR'}
+              {show ? <CountUpFinal value={data.breakdown.total} start={show} /> : '0 CR'}
             </Typography>
           </Box>
 
-          {/* quick stats */}
           <Box sx={{ px: 2.5, py: 1.25, display: 'flex', justifyContent: 'space-around', borderTop: `1px solid ${colors.border}` }}>
             {[
-              ['最终资金', data.finalCredits.toLocaleString()],
-              ['垄断数', String(data.monopolyCount)],
-              ['交易次数', String(data.tradeCount)],
-              ['事件数', String(data.eventCount)],
-            ].map(([label, val]) => (
+              ['Final Credits', data.finalCredits.toLocaleString()],
+              ['Monopolies', String(data.monopolyCount)],
+              ['Trades', String(data.tradeCount)],
+              ['Events', String(data.eventCount)],
+            ].map(([label, value]) => (
               <Box key={label} sx={{ textAlign: 'center' }}>
                 <Typography sx={{ fontSize: '0.6rem', color: colors.muted, fontFamily: 'var(--font-mono)' }}>{label}</Typography>
-                <Typography sx={{ fontSize: '0.78rem', color: colors.textMain, fontFamily: 'var(--font-mono)', fontWeight: 600, mt: 0.25 }}>{val}</Typography>
+                <Typography sx={{ fontSize: '0.78rem', color: colors.textMain, fontFamily: 'var(--font-mono)', fontWeight: 600, mt: 0.25 }}>
+                  {value}
+                </Typography>
               </Box>
             ))}
           </Box>
         </Box>
 
-        {/* ---- actions ---- */}
         <Box
           sx={{
             display: 'flex',
@@ -263,7 +275,7 @@ export default function SettlementScreen({ data, onReplay, onHome }: Props) {
               '&:hover': { boxShadow: `0 0 16px ${colors.glowStrong}` },
             }}
           >
-            再来一局
+            Replay
           </Button>
           <Button
             className="tech-button"
@@ -282,16 +294,10 @@ export default function SettlementScreen({ data, onReplay, onHome }: Props) {
               '&:hover': { borderColor: colors.primary, color: colors.primary, bgcolor: 'rgba(0,212,255,0.04)' },
             }}
           >
-            返回大厅
+            Back To Lobby
           </Button>
         </Box>
       </Box>
     </Box>
   );
-}
-
-/* ---- small helper for final total counting up ---- */
-function CountUpFinal({ value, start }: { value: number; start: boolean }) {
-  const count = useCountUp(value, 1800, start);
-  return <>{count.toLocaleString()} CR</>;
 }

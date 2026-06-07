@@ -12,6 +12,9 @@ export const mockAuthGateway: AuthGateway = {
   register: registerAccount,
   login: loginAccount,
   logout: logoutAccount,
+  async restoreCurrentAccount() {
+    return getCurrentAccount();
+  },
   getCurrentAccount,
   getLeaderboard,
   recordScore,
